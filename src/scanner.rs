@@ -1,4 +1,5 @@
 use crate::token::Token;
+use crate::error::Error;
 
 // TODO
 pub struct Scanner;
@@ -9,7 +10,7 @@ impl Scanner {
         Scanner
     }
 
-    pub fn scan_tokens(&mut self) -> Vec<Token> {
-        vec![]
+    pub fn scan_tokens(&mut self) -> Result<Vec<Token>, Error> {
+        Ok(vec![])
     }
 }
