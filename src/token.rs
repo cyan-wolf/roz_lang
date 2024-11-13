@@ -5,6 +5,12 @@ pub struct Token {
     kind: TokenKind,
 }
 
+impl Token {
+    pub fn new(kind: TokenKind, line: u32) -> Self {
+        Self {line, kind}
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
     Op(Op),
