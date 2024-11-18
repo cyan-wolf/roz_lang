@@ -32,6 +32,14 @@ pub enum Op {
     Semicolon, 
     Slash, 
     Star,
+    Bang,
+    BangEq,
+    Equality,
+    Eq,
+    LessEq,
+    GreaterEq,
+    Less,
+    Greater,
 }
 
 #[derive(Debug, PartialEq)]
