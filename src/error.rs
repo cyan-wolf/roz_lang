@@ -3,13 +3,13 @@ use std::fmt::Display;
 // Main error type.
 #[derive(Debug)]
 pub struct Error {
-    line: u32,
+    line: usize,
     message: String,
     ctx: String,
 }
 
 impl Error {
-    pub fn new(line: u32, message: String, ctx: String) -> Self {
+    pub fn new(line: usize, message: String, ctx: String) -> Self {
         Self {
             line, 
             message,

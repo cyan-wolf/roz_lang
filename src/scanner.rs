@@ -8,9 +8,9 @@ pub struct Scanner {
 }
 
 struct Location {
-    start: u32,
-    current: u32,
-    line: u32,
+    start: usize,
+    current: usize,
+    line: usize,
 }
 
 impl Scanner {
@@ -115,7 +115,7 @@ impl Scanner {
 
     fn advance(&mut self) -> char {
         self.loc.current += 1;
-        return self.source[self.loc.current as usize];
+        return self.source[self.loc.current];
     }
 
     fn add_token(&mut self, token: Token) {
@@ -126,7 +126,7 @@ impl Scanner {
         if self.is_at_end() {
             return false;
         }
-        if self.source[self.loc.current as usize] != expected {
+        if self.source[self.loc.current] != expected {
             return false;
         }
 
@@ -138,12 +138,12 @@ impl Scanner {
         if self.is_at_end() {
             '\0'
         } else {
-            self.source[self.loc.current as usize]
+            self.source[self.loc.current]
         }
     }
 
     fn peek_next(&self) -> char {
-        let curr = self.loc.current as usize;
+        let curr = self.loc.current;
 
         if curr + 1 >= self.source.len() {
             return '\0';
@@ -167,8 +167,8 @@ impl Scanner {
         self.advance();
       
         // Trim the surrounding quotes.
-        let start = self.loc.start as usize;
-        let current = self.loc.current as usize;
+        let start = self.loc.start;
+        let current = self.loc.current;
         let chars = &self.source[start + 1..current - 1];
 
         let mut buf = String::new();
@@ -197,11 +197,8 @@ impl Scanner {
             self.advance();
         }
 
-        let start = self.loc.start as usize;
-        let curr = self.loc.current as usize;
-
         let mut buf = String::new();
-        let chars = &self.source[start..curr];
+        let chars = &self.source[self.loc.start..self.loc.current];
 
         for c in chars {
             buf.push(*c);
@@ -214,6 +211,6 @@ impl Scanner {
     }
 
     fn is_at_end(&self) -> bool {
-        self.loc.current >= self.source.len() as u32
+        self.loc.current >= self.source.len()
     }
 }

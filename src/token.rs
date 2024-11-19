@@ -1,12 +1,12 @@
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
-    line: u32,
+    line: usize,
     kind: TokenKind,
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, line: u32) -> Self {
+    pub fn new(kind: TokenKind, line: usize) -> Self {
         Self {line, kind}
     }
 }
