@@ -115,8 +115,9 @@ impl Scanner {
     }
 
     fn advance(&mut self) -> char {
+        let c = self.source[self.loc.current];
         self.loc.current += 1;
-        return self.source[self.loc.current];
+        return c;
     }
 
     fn add_token(&mut self, token: Token) {
