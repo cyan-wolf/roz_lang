@@ -171,13 +171,9 @@ impl Scanner {
         let current = self.loc.current;
         let chars = &self.source[start + 1..current - 1];
 
-        let mut buf = String::new();
+        let string = Scanner::chars_to_string(chars);
 
-        for c in chars {
-            buf.push(*c);
-        }
-
-        Ok(Token::new(TokenKind::Literal(Literal::Str(buf)), self.loc.line))
+        Ok(Token::new(TokenKind::Literal(Literal::Str(string)), self.loc.line))
     }
 
     fn try_build_number(&mut self) -> Token {
@@ -197,14 +193,11 @@ impl Scanner {
             self.advance();
         }
 
-        let mut buf = String::new();
         let chars = &self.source[self.loc.start..self.loc.current];
 
-        for c in chars {
-            buf.push(*c);
-        }
+        let num_string = Scanner::chars_to_string(chars);
 
-        let num = buf.parse::<f64>()
+        let num = num_string.parse::<f64>()
             .expect("unexpected error while parsing number literal");
 
         Token::new(TokenKind::Literal(Literal::Num(num)), self.loc.line)
@@ -212,5 +205,16 @@ impl Scanner {
 
     fn is_at_end(&self) -> bool {
         self.loc.current >= self.source.len()
+    }
+
+    /// Utility function to turn slices of characters from the source 
+    /// into `String`s.
+    fn chars_to_string(chars: &[char]) -> String {
+        let mut buf = String::new();
+
+        for &c in chars {
+            buf.push(c);
+        }
+        buf
     }
 }
