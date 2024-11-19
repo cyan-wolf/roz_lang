@@ -46,7 +46,7 @@ fn run_prompt() -> Result<(), io::Error> {
 }
 
 fn run(content: Vec<char>) -> Result<(), Error> {
-    let mut scanner = Scanner::new(content);
+    let scanner = Scanner::new(content);
     let tokens = scanner.scan_tokens()?;
 
     for token in tokens {

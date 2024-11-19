@@ -1,4 +1,4 @@
-use crate::token::{Literal, Op, Token, TokenKind};
+use crate::token::{Keyword, Literal, Op, Token, TokenKind};
 use crate::error::Error;
 
 pub struct Scanner {
@@ -103,7 +103,8 @@ impl Scanner {
                 // Ignore whitespace.
                 return Ok(());
             },
-            c if c.is_ascii_digit() => self.try_build_number(),
+            c if c.is_ascii_digit() => self.build_number(),
+            c if c.is_ascii_alphabetic() || c == '_' => self.build_ident(),
             '"' => self.try_build_string()?,
             _ => return Err(Error::new(self.loc.line, "unexpected character".to_owned(), String::new())),
         };
@@ -176,7 +177,7 @@ impl Scanner {
         Ok(Token::new(TokenKind::Literal(Literal::Str(string)), self.loc.line))
     }
 
-    fn try_build_number(&mut self) -> Token {
+    fn build_number(&mut self) -> Token {
         // Consume the integer part.
         while self.peek().is_ascii_digit() {
             self.advance();
@@ -201,6 +202,46 @@ impl Scanner {
             .expect("unexpected error while parsing number literal");
 
         Token::new(TokenKind::Literal(Literal::Num(num)), self.loc.line)
+    }
+
+    fn build_ident(&mut self) -> Token {
+        while self.peek().is_ascii_alphanumeric() || self.peek() == '_' {
+            self.advance();
+        }
+
+        let chars = &self.source[self.loc.start..self.loc.current];
+        let ident = Scanner::chars_to_string(chars);
+
+        let kind = match Scanner::ident_to_keyword(&ident) {
+            Some(keyword) => TokenKind::Keyword(keyword),
+            None => TokenKind::Literal(Literal::Ident(ident)),
+        };
+
+        Token::new(kind, self.loc.line)
+    }
+
+    fn ident_to_keyword(ident: &str) -> Option<Keyword> {
+        let keyword = match ident {
+            "and" => Keyword::And,
+            "class" => Keyword::Class,
+            "else" => Keyword::Else,
+            "false" => Keyword::False,
+            "for" => Keyword::For,
+            "fun" => Keyword::Fun,
+            "if" => Keyword::If,
+            "nil" => Keyword::Nil,
+            "or" => Keyword::Or,
+            "print" => Keyword::Print,
+            "return" => Keyword::Return,
+            "super" => Keyword::Super,
+            "this" => Keyword::This,
+            "true" => Keyword::True,
+            "var" => Keyword::Var,
+            "while" => Keyword::While,
+            _ => return None,
+        };
+
+        Some(keyword)
     }
 
     fn is_at_end(&self) -> bool {
