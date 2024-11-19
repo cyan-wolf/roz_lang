@@ -103,6 +103,7 @@ impl Scanner {
                 // Ignore whitespace.
                 return Ok(());
             },
+            c if c.is_ascii_digit() => self.try_build_number(),
             '"' => self.try_build_string()?,
             _ => return Err(Error::new(self.loc.line, "unexpected character".to_owned(), String::new())),
         };
@@ -141,6 +142,15 @@ impl Scanner {
         }
     }
 
+    fn peek_next(&self) -> char {
+        let curr = self.loc.current as usize;
+
+        if curr + 1 >= self.source.len() {
+            return '\0';
+        }
+        self.source[curr + 1]
+    }
+
     fn try_build_string(&mut self) -> Result<Token, Error> {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
@@ -168,6 +178,39 @@ impl Scanner {
         }
 
         Ok(Token::new(TokenKind::Literal(Literal::Str(buf)), self.loc.line))
+    }
+
+    fn try_build_number(&mut self) -> Token {
+        // Consume the integer part.
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
+
+        // Look for a fractional part.
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
+            // Consume the "."
+            self.advance();
+        }
+
+        // Cosume the decimal part.
+        while self.peek().is_ascii_digit() {
+            self.advance();
+        }
+
+        let start = self.loc.start as usize;
+        let curr = self.loc.current as usize;
+
+        let mut buf = String::new();
+        let chars = &self.source[start..curr];
+
+        for c in chars {
+            buf.push(*c);
+        }
+
+        let num = buf.parse::<f64>()
+            .expect("unexpected error while parsing number literal");
+
+        Token::new(TokenKind::Literal(Literal::Num(num)), self.loc.line)
     }
 
     fn is_at_end(&self) -> bool {
