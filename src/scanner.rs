@@ -26,15 +26,27 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(mut self) -> Result<Vec<Token>, Error> {
+    /// Attempts to scan tokens from the `Scanner`s source text.
+    /// Returns the scanned tokens if there were no errors.
+    /// Otherwise, returns all the encountered errors found while scanning.
+    pub fn scan_tokens(mut self) -> Result<Vec<Token>, Vec<Error>> {
+        let mut errors = vec![];
+
         while !self.is_at_end() {
             self.loc.start = self.loc.current;
-            self.scan_token()?;
+
+            if let Err(err) = self.scan_token() {
+                errors.push(err);
+            }
         }
         
         self.tokens.push(Token::new(TokenKind::Eof, self.loc.line));
-        
-        Ok(self.tokens)
+
+        if errors.len() == 0 {
+            Ok(self.tokens)
+        } else {
+            Err(errors)
+        }
     }
 
     fn scan_token(&mut self) -> Result<(), Error> {

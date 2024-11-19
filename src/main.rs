@@ -13,8 +13,10 @@ fn run_file(file_name: String) -> Result<(), io::Error> {
         .collect();
 
     match run(content) {
-        Err(err) => {
-            eprintln!("{err}");
+        Err(errors) => {
+            for err in errors {
+                eprintln!("{err}");
+            }
             std::process::exit(65);
         },
         _ => {}
@@ -37,15 +39,17 @@ fn run_prompt() -> Result<(), io::Error> {
             .collect();
 
         match run(content) {
-            Err(err) => {
-                eprintln!("{err}");
+            Err(errors) => {
+                for err in errors {
+                    eprintln!("{err}");
+                }
             },
             _ => {},
         }
     }
 }
 
-fn run(content: Vec<char>) -> Result<(), Error> {
+fn run(content: Vec<char>) -> Result<(), Vec<Error>> {
     let scanner = Scanner::new(content);
     let tokens = scanner.scan_tokens()?;
 
