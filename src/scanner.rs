@@ -118,7 +118,10 @@ impl Scanner {
             c if c.is_ascii_digit() => self.build_number(),
             c if c.is_ascii_alphabetic() || c == '_' => self.build_ident(),
             '"' => self.try_build_string()?,
-            _ => return Err(Error::new(self.loc.line, "unexpected character".to_owned(), String::new())),
+            c => {
+                let err = Error::new(self.loc.line, format!("unexpected character '{c}'"), String::new());
+                return Err(err);
+            },
         };
 
         self.add_token(token);
