@@ -1,10 +1,11 @@
-use std::io::{self, Write};
-use scanner::Scanner;
-use error::Error;
-
 mod token;
 mod scanner;
 mod error;
+mod expr;
+
+use std::io::{self, Write};
+use scanner::Scanner;
+use error::Error;
 
 // Runs a source file.
 fn run_file(file_name: String) -> Result<(), io::Error> {
