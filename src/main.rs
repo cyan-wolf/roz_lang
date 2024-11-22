@@ -2,6 +2,7 @@ mod token;
 mod scanner;
 mod error;
 mod expr;
+mod parser;
 
 use std::io::{self, Write};
 use scanner::Scanner;
