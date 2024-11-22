@@ -12,6 +12,7 @@ pub enum Value {
     Num(f64),
     Str(String),
     Bool(bool),
+    Nil,
 }
 
 impl Display for Value {
@@ -20,6 +21,7 @@ impl Display for Value {
             Value::Num(num) => write!(f, "{num}"),
             Value::Str(str) => write!(f, "\"{str}\""),
             Value::Bool(bool) => write!(f, "{bool}"),
+            Value::Nil => write!(f, "nil"),
         }
     }
 }
