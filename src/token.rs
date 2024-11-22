@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 
 #[derive(Debug, PartialEq)]
 pub struct Token {
@@ -67,4 +69,84 @@ pub enum Keyword {
     True, 
     Var, 
     While,
+}
+
+impl Display for Op {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            Op::LeftParen => "(",
+            Op::RightParen => ")",
+            Op::LeftBrace => "{",
+            Op::RightBrace => "}",
+            Op::Comma => ",",
+            Op::Dot => ".",
+            Op::Minus => "-",
+            Op::Plus => "+",
+            Op::Semicolon => ";",
+            Op::Slash => "/",
+            Op::Star => "*",
+            Op::Bang => "!",
+            Op::BangEq => "!=",
+            Op::Equality => "==",
+            Op::Eq => "=",
+            Op::LessEq => "<=",
+            Op::GreaterEq => ">=",
+            Op::Less => "<",
+            Op::Greater => ">",
+        };
+
+        write!(f, "{str}")
+    }
+}
+
+impl Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Literal::Str(str) => write!(f, "\"{str}\""),
+            Literal::Num(num) => write!(f, "{num}"),
+            Literal::Ident(ident) => write!(f, "`{ident}`"),
+        }
+    }
+}
+
+impl Display for Keyword {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            Keyword::And => "and",
+            Keyword::Class => "class",
+            Keyword::Else => "else",
+            Keyword::False => "false",
+            Keyword::Fun => "fun",
+            Keyword::For => "for",
+            Keyword::If => "if",
+            Keyword::Nil => "nil",
+            Keyword::Or => "or",
+            Keyword::Print => "print",
+            Keyword::Return => "return",
+            Keyword::Super => "super",
+            Keyword::This => "this",
+            Keyword::True => "true",
+            Keyword::Var => "var",
+            Keyword::While => "while",
+        };
+
+        write!(f, "{str}")
+    }
+}
+
+impl Display for TokenKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenKind::Op(op) => write!(f, "{op}"),
+            TokenKind::Literal(literal) => write!(f, "{literal}"),
+            TokenKind::Keyword(keyword) => write!(f, "{keyword}"),
+            TokenKind::Eof => write!(f, "eof"),
+        }
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{kind}", kind=self.kind)
+    }
 }
