@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     line: usize,
     kind: TokenKind,
@@ -11,9 +11,13 @@ impl Token {
     pub fn new(kind: TokenKind, line: usize) -> Self {
         Self {line, kind}
     }
+
+    pub fn kind(&self) -> &TokenKind {
+        &self.kind
+    }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
     Op(Op),
     Literal(Literal),
@@ -21,7 +25,7 @@ pub enum TokenKind {
     Eof,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Op {
     LeftParen, 
     RightParen, 
@@ -44,14 +48,14 @@ pub enum Op {
     Greater,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     Str(String),
     Num(f64),
     Ident(String),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Keyword {
     And, 
     Class, 
