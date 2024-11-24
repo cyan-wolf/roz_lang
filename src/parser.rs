@@ -153,12 +153,11 @@ impl Parser {
         }
     }
 
-    /// Returns the current token and moves on to the next one.
-    fn advance(&mut self) -> &Token {
+    /// Moves on to the next token.
+    fn advance(&mut self) {
         if !self.is_at_end() {
             self.curr += 1;
         }
-        self.prev()
     }
 
     /// Returns the current token.
