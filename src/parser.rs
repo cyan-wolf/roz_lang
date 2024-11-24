@@ -1,5 +1,5 @@
 use crate::{expr::{Expr, Value}, token::{Keyword, Literal, Op, Token, TokenKind}};
-
+use crate::error::Error;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -15,26 +15,25 @@ impl Parser {
     }
 
     /// Parses an expression.
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Result<Expr, Error> {
         self.equality()
     }
 
     /// Parses an equality, such as `a == b` or `a != b`.
-    fn equality(&mut self) -> Expr {
-        let mut expr = self.comparision();
+    fn equality(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.comparision()?;
 
         while self.match_any([TokenKind::Op(Op::BangEq), TokenKind::Op(Op::Equality)]) {
             let op = self.prev().clone();
-            let right = self.comparision();
+            let right = self.comparision()?;
             expr = Expr::Binary(expr.as_box(), op, right.as_box())
         }
-
-        expr
+        Ok(expr)
     }
 
     /// Parses a comparison, such as `a < b` or `a >= b`.
-    fn comparision(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparision(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.term()?;
 
         while self.match_any([
             TokenKind::Op(Op::Greater),
@@ -43,43 +42,44 @@ impl Parser {
             TokenKind::Op(Op::LessEq),
         ]) {
             let op = self.prev().clone();
-            let right = self.term();
+            let right = self.term()?;
             expr = Expr::Binary(expr.as_box(), op, right.as_box());
         }
-        expr
+        Ok(expr)
     }
 
     /// Parses a term, such as `a + b` or `a - b`.
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.factor()?;
 
         while self.match_any([TokenKind::Op(Op::Plus), TokenKind::Op(Op::Minus)]) {
             let op = self.prev().clone();
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Expr::Binary(expr.as_box(), op, right.as_box());
         }
-        expr
+        Ok(expr)
     }
 
     /// Parses a factor, such as `a * b` or `a / b`.
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.unary()?;
 
         while self.match_any([TokenKind::Op(Op::Star), TokenKind::Op(Op::Slash)]) {
             let op = self.prev().clone();
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Expr::Binary(expr.as_box(), op, right.as_box());
         }
-        expr
+        Ok(expr)
     }
 
     /// Parses a unary expression, such as `-a` or `!b`.
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr, Error> {
         if self.match_any([TokenKind::Op(Op::Minus), TokenKind::Op(Op::Bang)]) {
             let op = self.prev().clone();
-            let right = self.unary();
+            let right = self.unary()?;
             
-            Expr::Unary(op, right.as_box())
+            let expr = Expr::Unary(op, right.as_box());
+            Ok(expr)
         } else {
             self.primary()
         }
@@ -87,10 +87,10 @@ impl Parser {
 
     /// Parses a primary expression, such as an individual value like `"abc"` or `34.5`.
     /// Also parses a grouping expression, such as `(1 + 2 * 8)`.
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> Result<Expr, Error> {
         // NOTE: Every match arm needs to call `self.advance()`, to move the 
         // parser along when it matches a token.
-        match self.peek().kind() {
+        let expr = match self.peek().kind() {
             TokenKind::Keyword(Keyword::False) => {
                 self.advance();
                 Expr::Literal(Value::Bool(false))
@@ -116,17 +116,29 @@ impl Parser {
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();
 
-                let expr = self.expression();
+                let expr = self.expression()?;
 
-                // TODO: Look for a right parentheses.
-                // ...
+                // Look for a right parentheses and consume it.
+                if self.check_curr(&TokenKind::Op(Op::RightParen)) {
+                    self.advance();
+                } else {
+                    let token = self.peek();
+                    let err = Error::new(
+                        token.line(), 
+                        "expected ')' after expression".to_owned(),
+                        format!("at {}", token),
+                    );
+                    return Err(err);
+                }
 
                 Expr::Grouping(expr.as_box())
             },
             _ => {
                 panic!("unexpected")
             },
-        }
+        };
+
+        Ok(expr)
     }
 
     /// Checks whether the current token is of any of the given kinds.
