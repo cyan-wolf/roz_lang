@@ -12,6 +12,10 @@ impl Token {
         Self {line, kind}
     }
 
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
     pub fn kind(&self) -> &TokenKind {
         &self.kind
     }
@@ -144,7 +148,7 @@ impl Display for TokenKind {
             TokenKind::Op(op) => write!(f, "{op}"),
             TokenKind::Literal(literal) => write!(f, "{literal}"),
             TokenKind::Keyword(keyword) => write!(f, "{keyword}"),
-            TokenKind::Eof => write!(f, "eof"),
+            TokenKind::Eof => write!(f, "'end of file'"),
         }
     }
 }
