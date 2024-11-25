@@ -141,6 +141,41 @@ impl Parser {
         Ok(expr)
     }
 
+    // Called to discard possibly erroneous tokens after an error is 
+    // encountered while parsing.
+    fn synchronize(&mut self) {
+        // Consume the current token since it was probably erroneous.
+        self.advance();
+
+        while !self.is_at_end() {
+            // If the last token marked the end of a statement, stop 
+            // discarding tokens.
+            if self.prev().kind() == &TokenKind::Op(Op::Semicolon) {
+                return;
+            }
+
+            // These keywords usually mark the start of a statement, 
+            // so if they're encountered it means that tokens no longer 
+            // need to be discarded.
+            if let TokenKind::Keyword(ref kw) = self.peek().kind() {
+                if let Keyword::Class
+                    | Keyword::Fun
+                    | Keyword::For
+                    | Keyword::If
+                    | Keyword::Print
+                    | Keyword::Return
+                    | Keyword::Var
+                    | Keyword::While = kw 
+                {
+                    return;
+                }
+            }
+
+            // Consume (discard) possibly erroneous tokens.
+            self.advance();
+        }
+    }
+
     /// Checks whether the current token is of any of the given kinds.
     /// If there is a match, then the parser advances.
     fn match_any(&mut self, kinds: impl IntoIterator<Item = TokenKind>) -> bool {
