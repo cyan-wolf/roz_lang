@@ -14,6 +14,18 @@ impl Parser {
         }
     }
 
+    /// Parses the given sequence of tokens.
+    /// TODO: Only parses expressions for now.
+    pub fn parse(&mut self) -> Option<Expr> {
+        match self.expression() {
+            Ok(expr) => Some(expr),
+            Err(err) => {
+                eprintln!("{err}");
+                None
+            }
+        }
+    }
+
     /// Parses an expression.
     fn expression(&mut self) -> Result<Expr, Error> {
         self.equality()
@@ -134,7 +146,14 @@ impl Parser {
                 Expr::Grouping(expr.as_box())
             },
             _ => {
-                panic!("unexpected")
+                let token = self.peek();
+                let err = Error::new(
+                    token.line(),
+                    "expected expression".to_owned(),
+                    format!("at {token}"),
+                );
+
+                return Err(err);
             },
         };
 
