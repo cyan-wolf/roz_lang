@@ -3,6 +3,7 @@ mod scanner;
 mod error;
 mod expr;
 mod parser;
+mod interpreter;
 
 use std::io::{self, Write};
 use parser::Parser;
