@@ -5,6 +5,7 @@ mod expr;
 mod parser;
 
 use std::io::{self, Write};
+use parser::Parser;
 use scanner::Scanner;
 use error::Error;
 
@@ -55,8 +56,10 @@ fn run(content: Vec<char>) -> Result<(), Vec<Error>> {
     let scanner = Scanner::new(content);
     let tokens = scanner.scan_tokens()?;
 
-    for token in tokens {
-        println!("{token:?}");
+    let expr = Parser::new(tokens).parse();
+
+    if let Some(expr) = expr {
+        println!("{expr}");
     }
 
     Ok(())
