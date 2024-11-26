@@ -55,7 +55,7 @@ impl Interpreter {
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
-                                        "cannot apply {} to operands of types <{}> and <{}>",
+                                        "cannot apply {} to operands of types {} and {}",
                                         token, op1.get_type(), op2.get_type(),
                                     ),
                                     token, 
@@ -75,7 +75,7 @@ impl Interpreter {
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
-                                        "cannot apply {} operands of types <{}> and <{}>",
+                                        "cannot apply {} operands of types {} and {}",
                                         token, op1.get_type(), op2.get_type(),
                                     ),
                                     token, 
@@ -95,7 +95,7 @@ impl Interpreter {
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
-                                        "cannot apply {} operands of types <{}> and <{}>",
+                                        "cannot apply {} operands of types {} and {}",
                                         token, op1.get_type(), op2.get_type(),
                                     ),
                                     token, 
@@ -115,7 +115,7 @@ impl Interpreter {
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
-                                        "cannot apply {} operands of types <{}> and <{}>",
+                                        "cannot apply {} operands of types {} and {}",
                                         token, op1.get_type(), op2.get_type(),
                                     ),
                                     token, 

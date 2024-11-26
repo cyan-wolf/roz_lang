@@ -19,10 +19,10 @@ impl Value {
     /// Returns the type of the value as a string.
     pub fn get_type(&self) -> String {
         match self {
-            Value::Num(_) => "number".to_owned(),
-            Value::Str(_) => "string".to_owned(),
-            Value::Bool(_) => "boolean".to_owned(),
-            Value::Nil => "nil".to_owned(),
+            Value::Num(_) => "<number>".to_owned(),
+            Value::Str(_) => "<string>".to_owned(),
+            Value::Bool(_) => "<boolean>".to_owned(),
+            Value::Nil => "<nil>".to_owned(),
         }
     }
 
