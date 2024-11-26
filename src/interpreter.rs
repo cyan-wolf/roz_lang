@@ -1,10 +1,19 @@
-use std::fmt::{format, Display};
+use std::fmt::Display;
 
 use crate::{expr::{Expr, Value}, token::{Op, Token, TokenKind}};
 
 pub struct Interpreter;
 
 impl Interpreter {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn interpret(&mut self, expr: Expr) -> Result<(), RuntimeError> {
+        self.evaluate(expr)
+            .map(|val| println!("{val}"))
+    }
+
     fn evaluate(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
         match expr {
             Expr::Literal(value) => Ok(value),
@@ -32,7 +41,7 @@ impl Interpreter {
                     },
                     _ => {
                         let err = RuntimeError::new(
-                            format!("unknown operator `{token}`"),
+                            format!("unknown unary operator `{token}`"),
                             token, 
                         );
                         Err(err)
@@ -75,7 +84,7 @@ impl Interpreter {
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
-                                        "cannot apply {} operands of types {} and {}",
+                                        "cannot apply {} to operands of types {} and {}",
                                         token, op1.get_type(), op2.get_type(),
                                     ),
                                     token, 
@@ -95,7 +104,7 @@ impl Interpreter {
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
-                                        "cannot apply {} operands of types {} and {}",
+                                        "cannot apply {} to operands of types {} and {}",
                                         token, op1.get_type(), op2.get_type(),
                                     ),
                                     token, 
@@ -110,12 +119,20 @@ impl Interpreter {
 
                         match (op1, op2) {
                             (Value::Num(num1), Value::Num(num2)) => {
+                                if num2 == 0.0 {
+                                    let err = RuntimeError::new(
+                                        "division by zero".to_owned(),
+                                        token,
+                                    );
+                                    return Err(err);
+                                }
+
                                 Ok(Value::Num(num1 / num2))
                             },
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
-                                        "cannot apply {} operands of types {} and {}",
+                                        "cannot apply {} to operands of types {} and {}",
                                         token, op1.get_type(), op2.get_type(),
                                     ),
                                     token, 
@@ -124,7 +141,117 @@ impl Interpreter {
                             },
                         }
                     },
-                    _ => todo!(),
+                    &TokenKind::Op(Op::Less) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        match (op1, op2) {
+                            (Value::Num(num1), Value::Num(num2)) => {
+                                Ok(Value::Bool(num1 < num2))
+                            },
+                            (Value::Str(str1), Value::Str(str2)) => {
+                                Ok(Value::Bool(str1 < str2))
+                            },
+                            (op1, op2) => {
+                                let err = RuntimeError::new(
+                                    format!(
+                                        "cannot apply {} to operands of types {} and {}",
+                                        token, op1.get_type(), op2.get_type(),
+                                    ),
+                                    token, 
+                                );
+                                Err(err)
+                            },
+                        }
+                    },
+                    &TokenKind::Op(Op::LessEq) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        match (op1, op2) {
+                            (Value::Num(num1), Value::Num(num2)) => {
+                                Ok(Value::Bool(num1 <= num2))
+                            },
+                            (Value::Str(str1), Value::Str(str2)) => {
+                                Ok(Value::Bool(str1 <= str2))
+                            },
+                            (op1, op2) => {
+                                let err = RuntimeError::new(
+                                    format!(
+                                        "cannot apply {} to operands of types {} and {}",
+                                        token, op1.get_type(), op2.get_type(),
+                                    ),
+                                    token, 
+                                );
+                                Err(err)
+                            },
+                        }
+                    },
+                    &TokenKind::Op(Op::Greater) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        match (op1, op2) {
+                            (Value::Num(num1), Value::Num(num2)) => {
+                                Ok(Value::Bool(num1 > num2))
+                            },
+                            (Value::Str(str1), Value::Str(str2)) => {
+                                Ok(Value::Bool(str1 > str2))
+                            },
+                            (op1, op2) => {
+                                let err = RuntimeError::new(
+                                    format!(
+                                        "cannot apply {} to operands of types {} and {}",
+                                        token, op1.get_type(), op2.get_type(),
+                                    ),
+                                    token, 
+                                );
+                                Err(err)
+                            },
+                        }
+                    },
+                    &TokenKind::Op(Op::GreaterEq) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        match (op1, op2) {
+                            (Value::Num(num1), Value::Num(num2)) => {
+                                Ok(Value::Bool(num1 >= num2))
+                            },
+                            (Value::Str(str1), Value::Str(str2)) => {
+                                Ok(Value::Bool(str1 >= str2))
+                            },
+                            (op1, op2) => {
+                                let err = RuntimeError::new(
+                                    format!(
+                                        "cannot apply {} to operands of types {} and {}",
+                                        token, op1.get_type(), op2.get_type(),
+                                    ),
+                                    token, 
+                                );
+                                Err(err)
+                            },
+                        }
+                    },
+                    &TokenKind::Op(Op::Equality) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        Ok(Value::Bool(op1 == op2))
+                    },
+                    &TokenKind::Op(Op::BangEq) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        Ok(Value::Bool(op1 != op2))
+                    },
+                    _ => {
+                        let err = RuntimeError::new(
+                            format!("unknown binary operator `{token}`"),
+                            token, 
+                        );
+                        Err(err)
+                    },
                 }
             },
             Expr::Grouping(expr) => self.evaluate(*expr),

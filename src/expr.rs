@@ -8,6 +8,7 @@ pub enum Expr {
     Grouping(Box<Expr>),
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Num(f64),
     Str(String),

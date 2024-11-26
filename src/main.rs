@@ -6,6 +6,7 @@ mod parser;
 mod interpreter;
 
 use std::io::{self, Write};
+use interpreter::Interpreter;
 use parser::Parser;
 use scanner::Scanner;
 use error::Error;
@@ -59,8 +60,12 @@ fn run(content: Vec<char>) -> Result<(), Vec<Error>> {
 
     let expr = Parser::new(tokens).parse();
 
+    let mut interpreter = Interpreter::new();
+
     if let Some(expr) = expr {
-        println!("{expr}");
+        if let Err(err) = interpreter.interpret(expr) {
+            eprintln!("{err}");
+        }
     }
 
     Ok(())
