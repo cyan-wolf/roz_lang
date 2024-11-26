@@ -61,6 +61,9 @@ impl Interpreter {
                             (Value::Str(str1), Value::Str(str2)) => {
                                 Ok(Value::Str(format!("{str1}{str2}")))
                             },
+                            (Value::Str(str1), val) => {
+                                Ok(Value::Str(format!("{str1}{val}")))
+                            },
                             (op1, op2) => {
                                 let err = RuntimeError::new(
                                     format!(
