@@ -135,11 +135,11 @@ impl Parser {
                 if self.check_curr(&TokenKind::Op(Op::RightParen)) {
                     self.advance();
                 } else {
-                    let token = self.peek();
+                    let token = self.peek().clone();
                     let err = SyntaxError::new(
                         token.line(), 
                         "expected ')' after expression".to_owned(),
-                        format!("at {}", token),
+                        Some(token),
                     );
                     return Err(err);
                 }
@@ -147,11 +147,11 @@ impl Parser {
                 Expr::Grouping(expr.as_box())
             },
             _ => {
-                let token = self.peek();
+                let token = self.peek().clone();
                 let err = SyntaxError::new(
                     token.line(),
                     "expected expression".to_owned(),
-                    format!("at {token}"),
+                    Some(token),
                 );
 
                 return Err(err);

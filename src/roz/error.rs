@@ -6,11 +6,11 @@ use super::token::Token;
 pub struct SyntaxError {
     line: usize,
     message: String,
-    ctx: String,
+    ctx: Option<Token>,
 }
 
 impl SyntaxError {
-    pub fn new(line: usize, message: String, ctx: String) -> Self {
+    pub fn new(line: usize, message: String, ctx: Option<Token>) -> Self {
         Self {
             line, 
             message,
@@ -21,7 +21,12 @@ impl SyntaxError {
 
 impl Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[line {}] Error '{}': {}", self.line, self.ctx, self.message)
+        write!(f, "[line {}] Error", self.line)?;
+
+        if let Some(ref ctx) = self.ctx {
+            write!(f, " at '{}'", ctx)?;
+        }
+        write!(f, ": {}", self.message)
     }
 }
 
@@ -30,15 +35,15 @@ impl std::error::Error for SyntaxError {}
 /// Error type used in the interpreter.
 #[derive(Debug)]
 pub struct RuntimeError {
-    token: Token,
     message: String,
+    token: Token,
 }
 
 impl RuntimeError {
     pub fn new(message: String, token: Token) -> Self {
         Self {
-            token,
             message,
+            token,
         }
     }
 }

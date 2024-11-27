@@ -119,7 +119,11 @@ impl Scanner {
             c if c.is_ascii_alphabetic() || c == '_' => self.build_ident(),
             '"' => self.try_build_string()?,
             c => {
-                let err = SyntaxError::new(self.loc.line, format!("unexpected character '{c}'"), String::new());
+                let err = SyntaxError::new(
+                    self.loc.line, 
+                    format!("unexpected character '{c}'"), 
+                    None,
+                );
                 return Err(err);
             },
         };
@@ -177,7 +181,12 @@ impl Scanner {
           }
       
         if self.is_at_end() {
-            return Err(SyntaxError::new(self.loc.line, "unterminated string".to_owned(), String::new()));
+            let err = SyntaxError::new(
+                self.loc.line, 
+                "unterminated string".to_owned(), 
+                None,
+            );
+            return Err(err);
         }
       
         // The closing quotes.
