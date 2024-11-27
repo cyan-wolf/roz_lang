@@ -1,5 +1,5 @@
-use crate::token::{Keyword, Literal, Op, Token, TokenKind};
-use crate::error::Error;
+use super::token::{Keyword, Literal, Op, Token, TokenKind};
+use super::error::SyntaxError;
 
 pub struct Scanner {
     source: Vec<char>,
@@ -29,7 +29,7 @@ impl Scanner {
     /// Attempts to scan tokens from the `Scanner`s source text.
     /// Returns the scanned tokens if there were no errors.
     /// Otherwise, returns all the encountered errors found while scanning.
-    pub fn scan_tokens(mut self) -> Result<Vec<Token>, Vec<Error>> {
+    pub fn scan_tokens(mut self) -> Result<Vec<Token>, Vec<SyntaxError>> {
         let mut errors = vec![];
 
         while !self.is_at_end() {
@@ -49,7 +49,7 @@ impl Scanner {
         }
     }
 
-    fn scan_token(&mut self) -> Result<(), Error> {
+    fn scan_token(&mut self) -> Result<(), SyntaxError> {
         let c = self.advance();
 
         let token = match c {
@@ -119,7 +119,7 @@ impl Scanner {
             c if c.is_ascii_alphabetic() || c == '_' => self.build_ident(),
             '"' => self.try_build_string()?,
             c => {
-                let err = Error::new(self.loc.line, format!("unexpected character '{c}'"), String::new());
+                let err = SyntaxError::new(self.loc.line, format!("unexpected character '{c}'"), String::new());
                 return Err(err);
             },
         };
@@ -168,7 +168,7 @@ impl Scanner {
         self.source[curr + 1]
     }
 
-    fn try_build_string(&mut self) -> Result<Token, Error> {
+    fn try_build_string(&mut self) -> Result<Token, SyntaxError> {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.loc.line += 1;
@@ -177,7 +177,7 @@ impl Scanner {
           }
       
         if self.is_at_end() {
-            return Err(Error::new(self.loc.line, "unterminated string".to_owned(), String::new()));
+            return Err(SyntaxError::new(self.loc.line, "unterminated string".to_owned(), String::new()));
         }
       
         // The closing quotes.

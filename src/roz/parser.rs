@@ -1,5 +1,6 @@
-use crate::{expr::{Expr, Value}, token::{Keyword, Literal, Op, Token, TokenKind}};
-use crate::error::Error;
+use super::error::SyntaxError;
+use super::expr::{Expr, Value};
+use super::token::{Keyword, Literal, Op, Token, TokenKind};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -27,12 +28,12 @@ impl Parser {
     }
 
     /// Parses an expression.
-    fn expression(&mut self) -> Result<Expr, Error> {
+    fn expression(&mut self) -> Result<Expr, SyntaxError> {
         self.equality()
     }
 
     /// Parses an equality, such as `a == b` or `a != b`.
-    fn equality(&mut self) -> Result<Expr, Error> {
+    fn equality(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.comparision()?;
 
         while self.match_any([TokenKind::Op(Op::BangEq), TokenKind::Op(Op::Equality)]) {
@@ -44,7 +45,7 @@ impl Parser {
     }
 
     /// Parses a comparison, such as `a < b` or `a >= b`.
-    fn comparision(&mut self) -> Result<Expr, Error> {
+    fn comparision(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.term()?;
 
         while self.match_any([
@@ -61,7 +62,7 @@ impl Parser {
     }
 
     /// Parses a term, such as `a + b` or `a - b`.
-    fn term(&mut self) -> Result<Expr, Error> {
+    fn term(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.factor()?;
 
         while self.match_any([TokenKind::Op(Op::Plus), TokenKind::Op(Op::Minus)]) {
@@ -73,7 +74,7 @@ impl Parser {
     }
 
     /// Parses a factor, such as `a * b` or `a / b`.
-    fn factor(&mut self) -> Result<Expr, Error> {
+    fn factor(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.unary()?;
 
         while self.match_any([TokenKind::Op(Op::Star), TokenKind::Op(Op::Slash)]) {
@@ -85,7 +86,7 @@ impl Parser {
     }
 
     /// Parses a unary expression, such as `-a` or `!b`.
-    fn unary(&mut self) -> Result<Expr, Error> {
+    fn unary(&mut self) -> Result<Expr, SyntaxError> {
         if self.match_any([TokenKind::Op(Op::Minus), TokenKind::Op(Op::Bang)]) {
             let op = self.prev().clone();
             let right = self.unary()?;
@@ -99,7 +100,7 @@ impl Parser {
 
     /// Parses a primary expression, such as an individual value like `"abc"` or `34.5`.
     /// Also parses a grouping expression, such as `(1 + 2 * 8)`.
-    fn primary(&mut self) -> Result<Expr, Error> {
+    fn primary(&mut self) -> Result<Expr, SyntaxError> {
         // NOTE: Every match arm needs to call `self.advance()`, to move the 
         // parser along when it matches a token.
         let expr = match self.peek().kind() {
@@ -135,7 +136,7 @@ impl Parser {
                     self.advance();
                 } else {
                     let token = self.peek();
-                    let err = Error::new(
+                    let err = SyntaxError::new(
                         token.line(), 
                         "expected ')' after expression".to_owned(),
                         format!("at {}", token),
@@ -147,7 +148,7 @@ impl Parser {
             },
             _ => {
                 let token = self.peek();
-                let err = Error::new(
+                let err = SyntaxError::new(
                     token.line(),
                     "expected expression".to_owned(),
                     format!("at {token}"),

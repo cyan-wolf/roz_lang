@@ -1,6 +1,6 @@
-use std::fmt::Display;
-
-use crate::{expr::{Expr, Value}, token::{Op, Token, TokenKind}};
+use super::expr::{Expr, Value};
+use super::token::{Op, TokenKind};
+use super::error::RuntimeError;
 
 pub struct Interpreter;
 
@@ -261,30 +261,3 @@ impl Interpreter {
         }
     }
 }
-
-#[derive(Debug)]
-pub struct RuntimeError {
-    token: Token,
-    message: String,
-}
-
-impl RuntimeError {
-    pub fn new(message: String, token: Token) -> Self {
-        Self {
-            token,
-            message,
-        }
-    }
-}
-
-impl Display for RuntimeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, 
-            "[line {}] Runtime Error: {}", 
-            self.token.line(),
-            self.message,
-        )
-    }
-}
-
-impl std::error::Error for RuntimeError {}

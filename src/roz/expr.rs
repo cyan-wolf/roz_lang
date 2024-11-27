@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::token::Token;
+use super::token::Token;
 
 pub enum Expr {
     Literal(Value),
