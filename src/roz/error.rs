@@ -21,7 +21,7 @@ impl SyntaxError {
 
 impl Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[line {}] Error", self.line)?;
+        write!(f, "[line {}] Syntax Error", self.line)?;
 
         if let Some(ref ctx) = self.ctx {
             write!(f, " at '{}'", ctx)?;

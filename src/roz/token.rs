@@ -112,7 +112,7 @@ impl Display for Literal {
         match self {
             Literal::Str(str) => write!(f, "\"{str}\""),
             Literal::Num(num) => write!(f, "{num}"),
-            Literal::Ident(ident) => write!(f, "`{ident}`"),
+            Literal::Ident(ident) => write!(f, "{ident}"),
         }
     }
 }

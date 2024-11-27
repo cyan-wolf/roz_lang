@@ -6,7 +6,7 @@ mod parser;
 mod interpreter;
 
 use std::io::{self, Write};
-use error::{RozError, SyntaxError};
+use error::RozError;
 use scanner::Scanner;
 use parser::Parser;
 use interpreter::Interpreter;
