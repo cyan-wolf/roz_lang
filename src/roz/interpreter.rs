@@ -1,4 +1,5 @@
 use super::expr::{Expr, Value};
+use super::stmt::Stmt;
 use super::token::{Op, TokenKind};
 use super::error::{RozError, RuntimeError};
 
@@ -9,10 +10,27 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn interpret(&mut self, expr: Expr) -> Result<(), RozError> {
-        self.evaluate(expr)
-            .map(|val| println!("{val}"))
-            .map_err(RozError::Runtime)
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RozError> {
+        for stmt in statements {
+            self.execute(stmt)
+                .map_err(RozError::Runtime)?;
+        }
+
+        Ok(())
+    }
+
+    fn execute(&mut self, stmt: Stmt) -> Result<(), RuntimeError> {
+        match stmt {
+            Stmt::Expr(expr) => {
+                let _ = self.evaluate(expr)?; // value is discarded
+            },
+            Stmt::Print(expr) => {
+                let val = self.evaluate(expr)?;
+                println!("{val}");
+            },
+        }
+
+        Ok(())
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Value, RuntimeError> {

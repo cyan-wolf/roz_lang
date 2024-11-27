@@ -1,5 +1,6 @@
 use super::error::{RozError, SyntaxError};
 use super::expr::{Expr, Value};
+use super::stmt::Stmt;
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
 
 pub struct Parser {
@@ -16,10 +17,63 @@ impl Parser {
     }
 
     /// Parses the given sequence of tokens.
-    /// TODO: Only parses expressions for now.
-    pub fn parse(&mut self) -> Result<Expr, RozError> {
-        self.expression()
-            .map_err(|err| RozError::Syntax(vec![err]))
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, RozError> {
+        let mut statements = vec![];
+
+        while !self.is_at_end() {
+            let stmt = self.statement()
+                .map_err(|err| RozError::Syntax(vec![err]))?;
+
+            statements.push(stmt);
+        }
+
+        Ok(statements)
+    }
+
+    fn statement(&mut self) -> Result<Stmt, SyntaxError> {
+        if self.match_any([TokenKind::Keyword(Keyword::Print)]) {
+            self.statement_print()
+        } else {
+            self.statement_expr()
+        }
+    }
+
+    fn statement_print(&mut self) -> Result<Stmt, SyntaxError> {
+        let expr = self.expression()?;
+
+        if self.check_curr(&TokenKind::Op(Op::Semicolon)) {
+            self.advance();
+        } else {
+            let token = self.peek().clone();
+            let err = SyntaxError::new(
+                token.line(),
+                "expected ';' after value".to_owned(),
+                Some(token),
+            );
+
+            return Err(err);
+        }
+
+        Ok(Stmt::Print(expr))
+    }
+
+    fn statement_expr(&mut self) -> Result<Stmt, SyntaxError> {
+        let expr = self.expression()?;
+
+        if self.check_curr(&TokenKind::Op(Op::Semicolon)) {
+            self.advance();
+        } else {
+            let token = self.peek().clone();
+            let err = SyntaxError::new(
+                token.line(),
+                "expected ';' after value".to_owned(),
+                Some(token),
+            );
+
+            return Err(err);
+        }
+
+        Ok(Stmt::Expr(expr))
     }
 
     /// Parses an expression.

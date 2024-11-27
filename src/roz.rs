@@ -2,6 +2,7 @@ mod token;
 mod scanner;
 mod error;
 mod expr;
+mod stmt;
 mod parser;
 mod interpreter;
 
@@ -62,10 +63,10 @@ fn run(content: Vec<char>) -> Result<(), RozError> {
     let scanner = Scanner::new(content);
     let tokens = scanner.scan_tokens()?;
 
-    let ast = Parser::new(tokens).parse()?;
+    let statements = Parser::new(tokens).parse()?;
 
     let mut interpreter = Interpreter::new();
-    interpreter.interpret(ast)?;
+    interpreter.interpret(statements)?;
 
     Ok(())
 }
