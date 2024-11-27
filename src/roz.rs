@@ -6,7 +6,7 @@ mod parser;
 mod interpreter;
 
 use std::io::{self, Write};
-use error::SyntaxError;
+use error::{RozError, SyntaxError};
 use scanner::Scanner;
 use parser::Parser;
 use interpreter::Interpreter;
@@ -18,11 +18,17 @@ pub fn run_file(file_name: String) -> Result<(), io::Error> {
         .collect();
 
     match run(content) {
-        Err(errors) => {
-            for err in errors {
-                eprintln!("{err}");
+        Err(err) => {
+            eprintln!("{err}");
+
+            match err {
+                RozError::Syntax(..) => {
+                    std::process::exit(65);
+                },
+                RozError::Runtime(..) => {
+                    std::process::exit(70);
+                },
             }
-            std::process::exit(65);
         },
         _ => {}
     }
@@ -44,29 +50,22 @@ pub fn run_prompt() -> Result<(), io::Error> {
             .collect();
 
         match run(content) {
-            Err(errors) => {
-                for err in errors {
-                    eprintln!("{err}");
-                }
+            Err(err) => {
+                eprintln!("{err}");
             },
             _ => {},
         }
     }
 }
 
-fn run(content: Vec<char>) -> Result<(), Vec<SyntaxError>> {
+fn run(content: Vec<char>) -> Result<(), RozError> {
     let scanner = Scanner::new(content);
     let tokens = scanner.scan_tokens()?;
 
-    let expr = Parser::new(tokens).parse();
+    let ast = Parser::new(tokens).parse()?;
 
     let mut interpreter = Interpreter::new();
-
-    if let Some(expr) = expr {
-        if let Err(err) = interpreter.interpret(expr) {
-            eprintln!("{err}");
-        }
-    }
+    interpreter.interpret(ast)?;
 
     Ok(())
 }

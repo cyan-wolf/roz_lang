@@ -1,6 +1,6 @@
 use super::expr::{Expr, Value};
 use super::token::{Op, TokenKind};
-use super::error::RuntimeError;
+use super::error::{RozError, RuntimeError};
 
 pub struct Interpreter;
 
@@ -9,9 +9,10 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn interpret(&mut self, expr: Expr) -> Result<(), RuntimeError> {
+    pub fn interpret(&mut self, expr: Expr) -> Result<(), RozError> {
         self.evaluate(expr)
             .map(|val| println!("{val}"))
+            .map_err(RozError::Runtime)
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Value, RuntimeError> {

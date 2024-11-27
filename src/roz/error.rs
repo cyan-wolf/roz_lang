@@ -59,3 +59,26 @@ impl Display for RuntimeError {
 }
 
 impl std::error::Error for RuntimeError {}
+
+/// General error type.
+#[derive(Debug)]
+pub enum RozError {
+    Syntax(Vec<SyntaxError>),
+    Runtime(RuntimeError),
+}
+
+impl Display for RozError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &RozError::Syntax(ref errs) => {
+                for err in errs {
+                    write!(f, "{err}")?;
+                }
+                Ok(())
+            },
+            &RozError::Runtime(ref err) => {
+                write!(f, "{err}")
+            },
+        }
+    }
+}

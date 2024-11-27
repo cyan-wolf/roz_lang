@@ -1,5 +1,5 @@
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
-use super::error::SyntaxError;
+use super::error::{RozError, SyntaxError};
 
 pub struct Scanner {
     source: Vec<char>,
@@ -29,7 +29,7 @@ impl Scanner {
     /// Attempts to scan tokens from the `Scanner`s source text.
     /// Returns the scanned tokens if there were no errors.
     /// Otherwise, returns all the encountered errors found while scanning.
-    pub fn scan_tokens(mut self) -> Result<Vec<Token>, Vec<SyntaxError>> {
+    pub fn scan_tokens(mut self) -> Result<Vec<Token>, RozError> {
         let mut errors = vec![];
 
         while !self.is_at_end() {
@@ -45,7 +45,7 @@ impl Scanner {
         if errors.len() == 0 {
             Ok(self.tokens)
         } else {
-            Err(errors)
+            Err(RozError::Syntax(errors))
         }
     }
 

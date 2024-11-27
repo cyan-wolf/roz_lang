@@ -1,4 +1,4 @@
-use super::error::SyntaxError;
+use super::error::{RozError, SyntaxError};
 use super::expr::{Expr, Value};
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
 
@@ -17,14 +17,9 @@ impl Parser {
 
     /// Parses the given sequence of tokens.
     /// TODO: Only parses expressions for now.
-    pub fn parse(&mut self) -> Option<Expr> {
-        match self.expression() {
-            Ok(expr) => Some(expr),
-            Err(err) => {
-                eprintln!("{err}");
-                None
-            }
-        }
+    pub fn parse(&mut self) -> Result<Expr, RozError> {
+        self.expression()
+            .map_err(|err| RozError::Syntax(vec![err]))
     }
 
     /// Parses an expression.
