@@ -1,13 +1,21 @@
+mod environment;
+
+use environment::Environment;
+
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
 use super::token::{Keyword, Op, TokenKind};
 use super::error::{RozError, RuntimeError};
 
-pub struct Interpreter;
+pub struct Interpreter {
+    env: Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            env: Environment::new(),
+        }
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RozError> {
@@ -27,6 +35,10 @@ impl Interpreter {
             Stmt::Print(expr) => {
                 let val = self.evaluate(expr)?;
                 println!("{val}");
+            },
+            Stmt::Var(ident, init) => {
+                let init = self.evaluate(init)?;
+                self.env.define(ident, init);
             },
         }
 
@@ -279,6 +291,9 @@ impl Interpreter {
                 }
             },
             Expr::Grouping(expr) => self.evaluate(*expr),
+            Expr::Var(ident, ctx) => {
+                self.env.retrieve(&ident, ctx)
+            },
         }
     }
 }

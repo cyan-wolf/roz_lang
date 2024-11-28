@@ -6,9 +6,16 @@ pub enum Expr {
     Unary(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
+    Var(String, Token),
 }
 
-#[derive(Debug, PartialEq)]
+impl Expr {
+    pub fn as_box(self) -> Box<Self> {
+        Box::new(self)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Num(f64),
     Str(String),
@@ -56,12 +63,9 @@ impl Display for Expr {
                 write!(f, "({token} {expr1} {expr2})")
             },
             Expr::Grouping(expr) => write!(f, "(group {expr})"),
+            Expr::Var(ident, _) => write!(f, "var({ident})"),
         }
     }
 }
 
-impl Expr {
-    pub fn as_box(self) -> Box<Self> {
-        Box::new(self)
-    }
-}
+

@@ -19,21 +19,35 @@ impl Parser {
     /// Parses the given sequence of tokens.
     pub fn parse(&mut self) -> Result<Vec<Stmt>, RozError> {
         let mut statements = vec![];
+        let mut errors = vec![];
 
         while !self.is_at_end() {
-            let stmt = self.statement()
-                .map_err(|err| RozError::Syntax(vec![err]))?;
-
-            statements.push(stmt);
+            match self.statement() {
+                Ok(stmt) => {
+                    statements.push(stmt);
+                },
+                Err(err) => {
+                    errors.push(err);
+                    self.synchronize();
+                },
+            }
         }
 
-        Ok(statements)
+        if errors.is_empty() {
+            Ok(statements)
+        } else {
+            Err(RozError::Syntax(errors))
+        }
     }
 
     fn statement(&mut self) -> Result<Stmt, SyntaxError> {
         if self.match_any([TokenKind::Keyword(Keyword::Print)]) {
             self.statement_print()
-        } else {
+        }
+        else if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
+            self.statement_declaration()
+        } 
+        else {
             self.statement_expr()
         }
     }
@@ -41,18 +55,10 @@ impl Parser {
     fn statement_print(&mut self) -> Result<Stmt, SyntaxError> {
         let expr = self.expression()?;
 
-        if self.check_curr(&TokenKind::Op(Op::Semicolon)) {
-            self.advance();
-        } else {
-            let token = self.peek().clone();
-            let err = SyntaxError::new(
-                token.line(),
-                "expected ';' after value".to_owned(),
-                Some(token),
-            );
-
-            return Err(err);
-        }
+        self.try_match(
+            &TokenKind::Op(Op::Semicolon), 
+            |_| "expected ';' after value".to_owned(),
+        )?;
 
         Ok(Stmt::Print(expr))
     }
@@ -66,6 +72,39 @@ impl Parser {
         )?;
 
         Ok(Stmt::Expr(expr))
+    }
+
+    fn statement_declaration(&mut self) -> Result<Stmt, SyntaxError> {
+        match self.peek().kind() {
+            TokenKind::Literal(Literal::Ident(ident)) => {
+                let ident = ident.clone();
+                self.advance();
+
+                let init = if self.match_any([TokenKind::Op(Op::Eq)]) {
+                    self.expression()?
+                } else {
+                    Expr::Literal(Value::Nil)
+                };
+
+                self.try_match(
+                    &TokenKind::Op(Op::Semicolon), 
+                    |_| "expected ';' after declaration".to_owned(),
+                )?;
+
+                Ok(Stmt::Var(ident, init))
+            },
+            _ => {
+                let token = self.peek().clone();
+
+                let err = SyntaxError::new(
+                    token.line(),
+                    "expected variable name".to_owned(),
+                    Some(token),
+                );
+
+                Err(err)
+            },
+        }
     }
 
     /// Parses an expression.
@@ -170,6 +209,11 @@ impl Parser {
                 let string = string.clone();
                 self.advance();
                 Expr::Literal(Value::Str(string))
+            },
+            TokenKind::Literal(Literal::Ident(ident)) => {
+                let ident = ident.clone();
+                self.advance();
+                Expr::Var(ident, self.prev().clone())
             },
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();
