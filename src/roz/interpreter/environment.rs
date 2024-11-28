@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::roz::{error::RuntimeError, expr::Value, token::Token};
+use crate::roz::{error::RuntimeError, expr::Value, token::{Literal, Token, TokenKind}};
 
 pub struct Environment {
     map: HashMap<String, Value>,
@@ -27,5 +27,17 @@ impl Environment {
                     ctx,
                 )
             })
+    }
+
+    pub fn assign(&self, lvalue: Token, value: Value) -> Result<(), RuntimeError> {
+        if let TokenKind::Literal(Literal::Ident(ident)) = lvalue.kind() {
+            if self.map.contains_key(ident) {
+                unimplemented!()
+            } else {
+                unimplemented!()
+            }
+        } else {
+            panic!("unexpected error: left hand side of assignment was not a valid location");
+        }
     }
 }

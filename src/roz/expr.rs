@@ -6,7 +6,11 @@ pub enum Expr {
     Unary(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
+    // For retrieving values in variables.
+    // Contains the identifier and a token for context.
     Var(String, Token),
+    // For assigning values to existing variables.
+    Assign(Token, Box<Expr>),
 }
 
 impl Expr {
@@ -64,6 +68,7 @@ impl Display for Expr {
             },
             Expr::Grouping(expr) => write!(f, "(group {expr})"),
             Expr::Var(ident, _) => write!(f, "var({ident})"),
+            Expr::Assign(lvalue, expr) => write!(f, "({lvalue} = {expr})"),
         }
     }
 }

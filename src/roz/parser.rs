@@ -112,6 +112,30 @@ impl Parser {
         self.equality()
     }
 
+    /// Parses an assignment expression.
+    fn assignment(&mut self) -> Result<Expr, SyntaxError> {
+        let expr = self.equality()?;
+
+        if self.match_any([TokenKind::Op(Op::Eq)]) {
+            let equals = self.prev().clone();
+            let rvalue = self.assignment()?;
+
+            if let Expr::Var(_, lvalue) = expr {
+                Ok(Expr::Assign(lvalue, rvalue.as_box()))
+            } else {
+                let err = SyntaxError::new(
+                    equals.line(),
+                    "invalid assignment target".to_owned(),
+                    Some(equals),
+                );
+
+                Err(err)
+            }
+        } else {
+            Ok(expr)
+        }
+    }
+
     /// Parses an equality, such as `a == b` or `a != b`.
     fn equality(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.comparision()?;

@@ -294,6 +294,9 @@ impl Interpreter {
             Expr::Var(ident, ctx) => {
                 self.env.retrieve(&ident, ctx)
             },
+            Expr::Assign(lvalue, expr) => {
+                unimplemented!()
+            },
         }
     }
 }
