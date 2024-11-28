@@ -82,9 +82,6 @@ impl Interpreter {
                             (Value::Num(num1), Value::Num(num2)) => {
                                 Ok(Value::Num(num1 + num2))
                             },
-                            (Value::Str(str1), Value::Str(str2)) => {
-                                Ok(Value::Str(format!("{str1}{str2}")))
-                            },
                             (Value::Str(str1), val) => {
                                 Ok(Value::Str(format!("{str1}{val}")))
                             },
