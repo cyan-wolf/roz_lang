@@ -77,6 +77,7 @@ pub enum Keyword {
     True, 
     Var, 
     While,
+    TypeOf,
 }
 
 impl Display for Op {
@@ -136,6 +137,7 @@ impl Display for Keyword {
             Keyword::True => "true",
             Keyword::Var => "var",
             Keyword::While => "while",
+            Keyword::TypeOf => "typeof",
         };
 
         write!(f, "{str}")

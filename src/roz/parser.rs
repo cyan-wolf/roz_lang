@@ -128,7 +128,11 @@ impl Parser {
 
     /// Parses a unary expression, such as `-a` or `!b`.
     fn unary(&mut self) -> Result<Expr, SyntaxError> {
-        if self.match_any([TokenKind::Op(Op::Minus), TokenKind::Op(Op::Bang)]) {
+        if self.match_any([
+            TokenKind::Op(Op::Minus), 
+            TokenKind::Op(Op::Bang), 
+            TokenKind::Keyword(Keyword::TypeOf),
+        ]) {
             let op = self.prev().clone();
             let right = self.unary()?;
             

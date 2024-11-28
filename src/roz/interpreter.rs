@@ -1,6 +1,6 @@
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
-use super::token::{Op, TokenKind};
+use super::token::{Keyword, Op, TokenKind};
 use super::error::{RozError, RuntimeError};
 
 pub struct Interpreter;
@@ -57,6 +57,11 @@ impl Interpreter {
                         // Coerces any operand into a boolean before 
                         // applying the not operator.
                         Ok(Value::Bool(!operand.to_bool()))
+                    },
+                    &TokenKind::Keyword(Keyword::TypeOf) => {
+                        let operand = self.evaluate(*expr)?;
+
+                        Ok(Value::Str(operand.get_type()))
                     },
                     _ => {
                         let err = RuntimeError::new(

@@ -263,6 +263,7 @@ impl Scanner {
             "true" => Keyword::True,
             "var" => Keyword::Var,
             "while" => Keyword::While,
+            "typeof" => Keyword::TypeOf,
             _ => return None,
         };
 
