@@ -60,18 +60,10 @@ impl Parser {
     fn statement_expr(&mut self) -> Result<Stmt, SyntaxError> {
         let expr = self.expression()?;
 
-        if self.check_curr(&TokenKind::Op(Op::Semicolon)) {
-            self.advance();
-        } else {
-            let token = self.peek().clone();
-            let err = SyntaxError::new(
-                token.line(),
-                "expected ';' after value".to_owned(),
-                Some(token),
-            );
-
-            return Err(err);
-        }
+        self.try_match(
+            &TokenKind::Op(Op::Semicolon), 
+            |_| "expected ';' after value".to_owned(),
+        )?;
 
         Ok(Stmt::Expr(expr))
     }
@@ -181,17 +173,10 @@ impl Parser {
                 let expr = self.expression()?;
 
                 // Look for a right parentheses and consume it.
-                if self.check_curr(&TokenKind::Op(Op::RightParen)) {
-                    self.advance();
-                } else {
-                    let token = self.peek().clone();
-                    let err = SyntaxError::new(
-                        token.line(), 
-                        "expected ')' after expression".to_owned(),
-                        Some(token),
-                    );
-                    return Err(err);
-                }
+                self.try_match(
+                    &TokenKind::Op(Op::RightParen), 
+                    |_|  "expected ')' after expression".to_owned(),
+                )?;
 
                 Expr::Grouping(expr.as_box())
             },
@@ -258,6 +243,27 @@ impl Parser {
             self.advance();
         }
         matched
+    }
+
+    /// Tries to match the current token.
+    /// If the match fails, return an error with a generated error message.
+    fn try_match(&mut self, kind: &TokenKind, 
+        err_msg_gen: impl FnOnce(&Token) -> String) -> Result<(), SyntaxError> 
+    {
+        if self.check_curr(kind) {
+            self.advance();
+
+            Ok(())
+        } else {
+            let token = self.peek().clone();
+            let err = SyntaxError::new(
+                token.line(),
+                err_msg_gen(&token),
+                Some(token),
+            );
+
+            Err(err)
+        }
     }
 
     /// Checks whether the current token is of the given kind.
