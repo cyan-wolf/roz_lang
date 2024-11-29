@@ -91,7 +91,7 @@ impl Parser {
                     |_| "expected ';' after declaration".to_owned(),
                 )?;
 
-                Ok(Stmt::Var(ident, init))
+                Ok(Stmt::DeclareVar(ident, init))
             },
             _ => {
                 let token = self.peek().clone();
@@ -109,7 +109,7 @@ impl Parser {
 
     /// Parses an expression.
     fn expression(&mut self) -> Result<Expr, SyntaxError> {
-        self.equality()
+        self.assignment()
     }
 
     /// Parses an assignment expression.
@@ -120,7 +120,7 @@ impl Parser {
             let equals = self.prev().clone();
             let rvalue = self.assignment()?;
 
-            if let Expr::Var(_, lvalue) = expr {
+            if let Expr::Var(lvalue) = expr {
                 Ok(Expr::Assign(lvalue, rvalue.as_box()))
             } else {
                 let err = SyntaxError::new(
@@ -234,10 +234,9 @@ impl Parser {
                 self.advance();
                 Expr::Literal(Value::Str(string))
             },
-            TokenKind::Literal(Literal::Ident(ident)) => {
-                let ident = ident.clone();
+            TokenKind::Literal(Literal::Ident(_)) => {
                 self.advance();
-                Expr::Var(ident, self.prev().clone())
+                Expr::Var(self.prev().clone())
             },
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();

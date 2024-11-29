@@ -36,7 +36,7 @@ impl Interpreter {
                 let val = self.evaluate(expr)?;
                 println!("{val}");
             },
-            Stmt::Var(ident, init) => {
+            Stmt::DeclareVar(ident, init) => {
                 let init = self.evaluate(init)?;
                 self.env.define(ident, init);
             },
@@ -291,11 +291,14 @@ impl Interpreter {
                 }
             },
             Expr::Grouping(expr) => self.evaluate(*expr),
-            Expr::Var(ident, ctx) => {
-                self.env.retrieve(&ident, ctx)
+            Expr::Var(ident) => {
+                self.env.retrieve(ident)
             },
             Expr::Assign(lvalue, expr) => {
-                unimplemented!()
+                let rvalue = self.evaluate(*expr)?;
+                self.env.assign(lvalue, rvalue.clone())?;
+
+                Ok(rvalue)
             },
         }
     }

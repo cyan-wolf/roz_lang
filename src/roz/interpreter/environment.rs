@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::roz::{error::RuntimeError, expr::Value, token::{Literal, Token, TokenKind}};
+use crate::roz::{
+    error::RuntimeError, 
+    expr::Value, 
+    token::{Literal, Token, TokenKind},
+};
 
 pub struct Environment {
     map: HashMap<String, Value>,
@@ -17,27 +21,40 @@ impl Environment {
         self.map.insert(ident, val);
     }
 
-    pub fn retrieve(&self, ident: &str, ctx: Token) -> Result<Value, RuntimeError> {
+    pub fn retrieve(&self, token: Token) -> Result<Value, RuntimeError> {
+        let ident = Self::get_ident_from_token(&token);
+
         self.map
             .get(ident)
             .cloned()
             .ok_or_else(|| {
                 RuntimeError::new(
-                    format!("undefined variable name '{ident}'"),
-                    ctx,
+                    format!("undefined variable name '{token}'"),
+                    token,
                 )
             })
     }
 
-    pub fn assign(&self, lvalue: Token, value: Value) -> Result<(), RuntimeError> {
-        if let TokenKind::Literal(Literal::Ident(ident)) = lvalue.kind() {
-            if self.map.contains_key(ident) {
-                unimplemented!()
-            } else {
-                unimplemented!()
-            }
+    pub fn assign(&mut self, lvalue: Token, value: Value) -> Result<(), RuntimeError> {
+        let ident = Self::get_ident_from_token(&lvalue);
+
+        if let Some(entry) = self.map.get_mut(ident) {
+            *entry = value;
+            Ok(())
         } else {
-            panic!("unexpected error: left hand side of assignment was not a valid location");
+            let err = RuntimeError::new(
+                format!("undefined variable '{ident}'"),
+                lvalue,
+            );
+
+            Err(err)
+        }
+    }
+
+    fn get_ident_from_token(token: &Token) -> &str {
+        match token.kind() {
+            TokenKind::Literal(Literal::Ident(ident)) => ident,
+            _ => panic!("unexpected error: '{token}' was not an identifier"),
         }
     }
 }
