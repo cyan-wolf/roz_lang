@@ -46,7 +46,10 @@ impl Parser {
         }
         else if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
             self.statement_declaration()
-        } 
+        }
+        else if self.match_any([TokenKind::Op(Op::LeftBrace)]) {
+            self.statement_block()
+        }
         else {
             self.statement_expr()
         }
@@ -105,6 +108,23 @@ impl Parser {
                 Err(err)
             },
         }
+    }
+
+    fn statement_block(&mut self) -> Result<Stmt, SyntaxError> {
+        let mut statements = vec![];
+
+        while !self.check_curr(&TokenKind::Op(Op::RightBrace)) 
+            && !self.is_at_end()
+        {
+            statements.push(self.statement()?);
+        }
+
+        self.try_match(
+            &TokenKind::Op(Op::RightBrace),
+            |_| "expected '}' after block".to_owned(),
+        )?;
+        
+        Ok(Stmt::Block(statements))
     }
 
     /// Parses an expression.

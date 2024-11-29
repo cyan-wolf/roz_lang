@@ -1,6 +1,8 @@
 mod environment;
 
-use environment::Environment;
+use std::rc::Rc;
+
+use environment::{Environment, RcCell};
 
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
@@ -8,13 +10,13 @@ use super::token::{Keyword, Op, TokenKind};
 use super::error::{RozError, RuntimeError};
 
 pub struct Interpreter {
-    env: Environment,
+    curr_env: RcCell<Environment>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
-            env: Environment::new(),
+            curr_env: Environment::new().to_rc_cell(),
         }
     }
 
@@ -38,11 +40,42 @@ impl Interpreter {
             },
             Stmt::DeclareVar(ident, init) => {
                 let init = self.evaluate(init)?;
-                self.env.define(ident, init);
+
+                self.curr_env
+                    .borrow_mut()
+                    .define(ident, init);
+            },
+            Stmt::Block(statements) => {
+                let new_env = Environment::with_enclosing(
+                    Rc::clone(&self.curr_env),
+                ).to_rc_cell();
+
+                self.execute_block(
+                    statements, 
+                    new_env,
+                )?;
             },
         }
 
         Ok(())
+    }
+
+    fn execute_block(&mut self, statements: Vec<Stmt>, new_env: RcCell<Environment>) -> Result<(), RuntimeError> {
+        // Set the current environment to be the new one.
+        let prev_env = Rc::clone(&self.curr_env);
+        self.curr_env = new_env;
+
+        // Execute the block's statements under this new environment, 
+        // and collect their result.
+        let result: Result<(), RuntimeError> = statements.into_iter()
+            .map(|stmt| self.execute(stmt))
+            .collect();
+
+        // Reset the current environment.
+        self.curr_env = prev_env;
+
+        // Return the result after executing the statements.
+        result
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
@@ -292,11 +325,16 @@ impl Interpreter {
             },
             Expr::Grouping(expr) => self.evaluate(*expr),
             Expr::Var(ident) => {
-                self.env.retrieve(ident)
+                self.curr_env
+                    .borrow()
+                    .retrieve(ident)
             },
             Expr::Assign(lvalue, expr) => {
                 let rvalue = self.evaluate(*expr)?;
-                self.env.assign(lvalue, rvalue.clone())?;
+
+                self.curr_env
+                    .borrow_mut()
+                    .assign(lvalue, rvalue.clone())?;
 
                 Ok(rvalue)
             },

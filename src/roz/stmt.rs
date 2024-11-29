@@ -5,5 +5,5 @@ pub enum Stmt {
     Expr(Expr),
     Print(Expr),
     DeclareVar(String, Expr),
+    Block(Vec<Stmt>),
 }
-
