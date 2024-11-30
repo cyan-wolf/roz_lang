@@ -40,6 +40,7 @@ impl Parser {
         }
     }
 
+    /// Parses a statement.
     fn statement(&mut self) -> Result<Stmt, SyntaxError> {
         if self.match_any([TokenKind::Keyword(Keyword::Print)]) {
             self.statement_print()
@@ -50,11 +51,15 @@ impl Parser {
         else if self.match_any([TokenKind::Op(Op::LeftBrace)]) {
             self.statement_block()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::If)]) {
+            self.statement_if()
+        }
         else {
             self.statement_expr()
         }
     }
 
+    /// Parses a print statement, i.e. `print <expr>;`.
     fn statement_print(&mut self) -> Result<Stmt, SyntaxError> {
         let expr = self.expression()?;
 
@@ -66,6 +71,7 @@ impl Parser {
         Ok(Stmt::Print(expr))
     }
 
+    /// Parses a statement which is just an expression followed by a semicolon.
     fn statement_expr(&mut self) -> Result<Stmt, SyntaxError> {
         let expr = self.expression()?;
 
@@ -77,6 +83,7 @@ impl Parser {
         Ok(Stmt::Expr(expr))
     }
 
+    /// Parses a variable declaration, i.e. `var <name> = <expr>;`.
     fn statement_declaration(&mut self) -> Result<Stmt, SyntaxError> {
         match self.peek().kind() {
             TokenKind::Literal(Literal::Ident(ident)) => {
@@ -110,6 +117,8 @@ impl Parser {
         }
     }
 
+    /// Parses a block statement, which is just a series of statements
+    /// wrapped in braces `{}`.
     fn statement_block(&mut self) -> Result<Stmt, SyntaxError> {
         let mut statements = vec![];
 
@@ -125,6 +134,24 @@ impl Parser {
         )?;
         
         Ok(Stmt::Block(statements))
+    }
+
+    /// Parses an if statement.
+    fn statement_if(&mut self) -> Result<Stmt, SyntaxError> {
+        let condition = self.expression()?;
+        let block_then = self.statement_block()?;
+
+        let block_else = if self.match_any([
+            TokenKind::Keyword(Keyword::Else),
+        ]) {
+            let block_else = self.statement_block()?;
+            Some(Box::new(block_else))
+        } else {
+            None
+        };
+
+        let stmt = Stmt::If(condition, Box::new(block_then), block_else);
+        Ok(stmt)
     }
 
     /// Parses an expression.

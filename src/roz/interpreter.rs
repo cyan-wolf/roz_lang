@@ -55,6 +55,16 @@ impl Interpreter {
                     new_env,
                 )?;
             },
+            Stmt::If(cond, branch_then, branch_else) => {
+                let cond = self.evaluate(cond)?.to_bool();
+
+                if cond {
+                    self.execute(*branch_then)?;
+                } 
+                else if let Some(branch_else) = branch_else {
+                    self.execute(*branch_else)?;
+                }
+            },
         }
 
         Ok(())

@@ -1,4 +1,3 @@
-
 use super::expr::Expr;
 
 pub enum Stmt {
@@ -6,4 +5,5 @@ pub enum Stmt {
     Print(Expr),
     DeclareVar(String, Expr),
     Block(Vec<Stmt>),
+    If(Expr, Box<Stmt>, Option<Box<Stmt>>),
 }
