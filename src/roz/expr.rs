@@ -11,7 +11,7 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn as_box(self) -> Box<Self> {
+    pub fn to_box(self) -> Box<Self> {
         Box::new(self)
     }
 }

@@ -161,14 +161,14 @@ impl Parser {
 
     /// Parses an assignment expression.
     fn assignment(&mut self) -> Result<Expr, SyntaxError> {
-        let expr = self.equality()?;
+        let expr = self.logic_or()?;
 
         if self.match_any([TokenKind::Op(Op::Eq)]) {
             let equals = self.prev().clone();
             let rvalue = self.assignment()?;
 
             if let Expr::Var(lvalue) = expr {
-                Ok(Expr::Assign(lvalue, rvalue.as_box()))
+                Ok(Expr::Assign(lvalue, rvalue.to_box()))
             } else {
                 let err = SyntaxError::new(
                     equals.line(),
@@ -183,6 +183,32 @@ impl Parser {
         }
     }
 
+    fn logic_or(&mut self) -> Result<Expr, SyntaxError> {
+        let mut expr = self.logic_and()?;
+
+        while self.match_any([TokenKind::Keyword(Keyword::Or)]) {
+            let op = self.prev().clone();
+            let right = self.logic_and()?;
+
+            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+        }
+        
+        Ok(expr)
+    }
+
+    fn logic_and(&mut self) -> Result<Expr, SyntaxError> {
+        let mut expr = self.equality()?;
+
+        while self.match_any([TokenKind::Keyword(Keyword::And)]) {
+            let op = self.prev().clone();
+            let right = self.equality()?;
+
+            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+        }
+        
+        Ok(expr)
+    }
+
     /// Parses an equality, such as `a == b` or `a != b`.
     fn equality(&mut self) -> Result<Expr, SyntaxError> {
         let mut expr = self.comparision()?;
@@ -190,7 +216,7 @@ impl Parser {
         while self.match_any([TokenKind::Op(Op::BangEq), TokenKind::Op(Op::Equality)]) {
             let op = self.prev().clone();
             let right = self.comparision()?;
-            expr = Expr::Binary(expr.as_box(), op, right.as_box())
+            expr = Expr::Binary(expr.to_box(), op, right.to_box())
         }
         Ok(expr)
     }
@@ -207,7 +233,7 @@ impl Parser {
         ]) {
             let op = self.prev().clone();
             let right = self.term()?;
-            expr = Expr::Binary(expr.as_box(), op, right.as_box());
+            expr = Expr::Binary(expr.to_box(), op, right.to_box());
         }
         Ok(expr)
     }
@@ -219,7 +245,7 @@ impl Parser {
         while self.match_any([TokenKind::Op(Op::Plus), TokenKind::Op(Op::Minus)]) {
             let op = self.prev().clone();
             let right = self.factor()?;
-            expr = Expr::Binary(expr.as_box(), op, right.as_box());
+            expr = Expr::Binary(expr.to_box(), op, right.to_box());
         }
         Ok(expr)
     }
@@ -231,7 +257,7 @@ impl Parser {
         while self.match_any([TokenKind::Op(Op::Star), TokenKind::Op(Op::Slash)]) {
             let op = self.prev().clone();
             let right = self.unary()?;
-            expr = Expr::Binary(expr.as_box(), op, right.as_box());
+            expr = Expr::Binary(expr.to_box(), op, right.to_box());
         }
         Ok(expr)
     }
@@ -246,7 +272,7 @@ impl Parser {
             let op = self.prev().clone();
             let right = self.unary()?;
             
-            let expr = Expr::Unary(op, right.as_box());
+            let expr = Expr::Unary(op, right.to_box());
             Ok(expr)
         } else {
             self.primary()
@@ -296,7 +322,7 @@ impl Parser {
                     |_|  "expected ')' after expression".to_owned(),
                 )?;
 
-                Expr::Grouping(expr.as_box())
+                Expr::Grouping(expr.to_box())
             },
             _ => {
                 let token = self.peek().clone();

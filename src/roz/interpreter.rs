@@ -324,6 +324,28 @@ impl Interpreter {
 
                         Ok(Value::Bool(op1 != op2))
                     },
+                    // Evaluates to the "truthy" value, if present.
+                    &TokenKind::Keyword(Keyword::Or) => {
+                        let op1 = self.evaluate(*expr1)?;
+
+                        if !op1.to_bool() {
+                            let op2 = self.evaluate(*expr2)?;
+                            Ok(op2)
+                        } else {
+                            Ok(op1)
+                        }
+                    },
+                    // Evaluates to the "falsey" value, if present.
+                    &TokenKind::Keyword(Keyword::And) => {
+                        let op1 = self.evaluate(*expr1)?;
+
+                        if op1.to_bool() {
+                            let op2 = self.evaluate(*expr2)?;
+                            Ok(op2)
+                        } else {
+                            Ok(op1)
+                        }
+                    },
                     _ => {
                         let err = RuntimeError::new(
                             format!("unknown binary operator `{token}`"),
