@@ -139,12 +139,24 @@ impl Parser {
     /// Parses an if statement.
     fn statement_if(&mut self) -> Result<Stmt, SyntaxError> {
         let condition = self.expression()?;
+
+        // Match a '{' before parsing the 'then' block.
+        self.try_match(
+            &TokenKind::Op(Op::LeftBrace),
+            |_| "expected '{' after if condition".to_owned(),
+        )?;
         let block_then = self.statement_block()?;
 
         let block_else = if self.match_any([
             TokenKind::Keyword(Keyword::Else),
         ]) {
+            // Match a '{' before parsing the 'else' block.
+            self.try_match(
+                &TokenKind::Op(Op::LeftBrace),
+                |_| "expected '{' after else".to_owned(),
+            )?;
             let block_else = self.statement_block()?;
+            
             Some(Box::new(block_else))
         } else {
             None
