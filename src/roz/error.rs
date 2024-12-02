@@ -71,8 +71,12 @@ impl Display for RozError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             &RozError::Syntax(ref errs) => {
-                for err in errs {
-                    write!(f, "{err}")?;
+                for i in 0..errs.len() {
+                    write!(f, "{}", errs[i])?;
+
+                    if i != errs.len() - 1 {
+                        write!(f, "\n")?;
+                    }
                 }
                 Ok(())
             },
