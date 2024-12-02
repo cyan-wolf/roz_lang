@@ -65,6 +65,11 @@ impl Interpreter {
                     self.execute(*branch_else)?;
                 }
             },
+            Stmt::While(cond, block) => {
+                while self.evaluate(cond.clone())?.to_bool() {
+                    self.execute(*block.clone())?;
+                }
+            },
         }
 
         Ok(())

@@ -54,6 +54,9 @@ impl Parser {
         else if self.match_any([TokenKind::Keyword(Keyword::If)]) {
             self.statement_if()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::While)]) {
+            self.statement_while()
+        }
         else {
             self.statement_expr()
         }
@@ -156,13 +159,27 @@ impl Parser {
                 |_| "expected '{' after else".to_owned(),
             )?;
             let block_else = self.statement_block()?;
-            
+
             Some(Box::new(block_else))
         } else {
             None
         };
 
         let stmt = Stmt::If(condition, Box::new(block_then), block_else);
+        Ok(stmt)
+    }
+
+    fn statement_while(&mut self) -> Result<Stmt, SyntaxError> {
+        let cond = self.expression()?;
+
+        // Match a '{' before parsing the 'while' block.
+        self.try_match(
+            &TokenKind::Op(Op::LeftBrace),
+            |_| "expected '{' after 'while' condition".to_owned(),
+        )?;
+        let block = self.statement_block()?;
+
+        let stmt = Stmt::While(cond, Box::new(block));
         Ok(stmt)
     }
 
