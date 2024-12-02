@@ -70,6 +70,9 @@ impl Interpreter {
                     self.execute(*block.clone())?;
                 }
             },
+            Stmt::For(init, cond, sideEffect, block) => {
+                unimplemented!()
+            },
         }
 
         Ok(())
