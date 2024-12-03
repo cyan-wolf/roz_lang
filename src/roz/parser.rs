@@ -57,6 +57,9 @@ impl Parser {
         else if self.match_any([TokenKind::Keyword(Keyword::While)]) {
             self.statement_while()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::For)]) {
+            self.statement_for()
+        }
         else {
             self.statement_expr()
         }
@@ -180,6 +183,39 @@ impl Parser {
         let block = self.statement_block()?;
 
         let stmt = Stmt::While(cond, Box::new(block));
+        Ok(stmt)
+    }
+
+    fn statement_for(&mut self) -> Result<Stmt, SyntaxError> {
+        let init = if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
+            self.statement_declaration()?
+        } else {
+            self.statement_expr()?
+        };
+
+        let cond = self.expression()?;
+        // Match a ';' before parsing the next part of the 'for'.
+        self.try_match(
+            &TokenKind::Op(Op::Semicolon),
+            |_| "expected ';' after 'for' condition".to_owned(),
+        )?;
+
+        let side_effect = self.expression()?;
+
+        // Match a '{' before parsing the 'for' block.
+        self.try_match(
+            &TokenKind::Op(Op::LeftBrace),
+            |_| "expected '{' after 'for' updater".to_owned(),
+        )?;
+        let for_block = self.statement_block()?;
+
+        let stmt = Stmt::For(
+            Box::new(init), 
+            cond,
+            side_effect,
+            Box::new(for_block),
+        );
+
         Ok(stmt)
     }
 

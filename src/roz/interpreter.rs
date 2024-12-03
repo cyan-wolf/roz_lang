@@ -70,15 +70,30 @@ impl Interpreter {
                     self.execute(*block.clone())?;
                 }
             },
-            Stmt::For(init, cond, sideEffect, block) => {
-                unimplemented!()
+            Stmt::For(init, cond, side_effect, for_block) => {
+                // Transform the for loop into an equivalent while loop.
+                // A block is made to limit the scope of the initializer.
+                let stmt = Stmt::Block(vec![
+                    *init,
+                    Stmt::While(
+                        cond,
+                        // The "side effect" expression statement needs to be in the 
+                        // 'while' block since it needs to run at the end of every 
+                        // iteration.
+                        Box::new(Stmt::Block(vec![*for_block, Stmt::Expr(side_effect)])),
+                    ),
+                ]);
+                
+                self.execute(stmt)?;
             },
         }
 
         Ok(())
     }
 
-    fn execute_block(&mut self, statements: Vec<Stmt>, new_env: RcCell<Environment>) -> Result<(), RuntimeError> {
+    fn execute_block(&mut self, statements: Vec<Stmt>, 
+        new_env: RcCell<Environment>) -> Result<(), RuntimeError> 
+    {
         // Set the current environment to be the new one.
         let prev_env = Rc::clone(&self.curr_env);
         self.curr_env = new_env;
