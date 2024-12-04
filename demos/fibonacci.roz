@@ -1,4 +1,4 @@
-// This dmeo prints the Fibonacci sequence.
+// This demo prints the Fibonacci sequence.
 
 var limit = 10;
 var a = 0;
