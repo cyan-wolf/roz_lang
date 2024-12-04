@@ -1,0 +1,15 @@
+// This dmeo prints the Fibonacci sequence.
+
+var limit = 10;
+var a = 0;
+var b = 1;
+
+while limit >= 0 {
+    print a;
+
+    var temp = a;
+    a = b;
+    b = temp + b;
+
+    limit = limit - 1;
+}
