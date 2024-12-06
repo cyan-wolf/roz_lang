@@ -6,7 +6,7 @@ use environment::{Environment, RcCell};
 
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
-use super::token::{Keyword, Op, TokenKind};
+use super::token::{Keyword, Op, Token, TokenKind};
 use super::error::{RozError, RuntimeError};
 
 pub struct Interpreter {
@@ -393,6 +393,37 @@ impl Interpreter {
 
                 Ok(rvalue)
             },
+            Expr::Call(callee, args, ctx) => {
+                let callee = self.evaluate(*callee)?;
+
+                let args = args.into_iter()
+                    .map(|arg| self.evaluate(arg))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                self.try_call_value(callee, args, ctx)
+            },
         }
+    }
+
+    fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeError> {
+        if !callee.is_callable() {
+            let err = RuntimeError::new(
+                format!("value '{callee}' is not callable"),
+                ctx,
+            );
+            return Err(err);
+        }
+        let callable = callee.into_callable()
+            .expect("unexpected error: could not call value");
+
+        if args.len() != callable.arity() {
+            let err = RuntimeError::new(
+                format!("expected {} arguments, but got {}", args.len(), callable.arity()),
+                ctx,
+            );
+            return Err(err);
+        }
+        
+        unimplemented!()
     }
 }

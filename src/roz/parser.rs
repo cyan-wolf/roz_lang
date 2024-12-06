@@ -1,4 +1,4 @@
-use super::error::{RozError, SyntaxError};
+use super::error::{RozError, RuntimeError, SyntaxError};
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
@@ -340,7 +340,56 @@ impl Parser {
             let expr = Expr::Unary(op, right.to_box());
             Ok(expr)
         } else {
-            self.primary()
+            self.call()
+        }
+    }
+
+    fn call(&mut self) -> Result<Expr, SyntaxError> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_any([TokenKind::Op(Op::LeftParen)]) {
+                let paren = self.prev().clone();
+                let args = self.arguments()?;
+                
+                self.try_match(
+                    &TokenKind::Op(Op::RightParen), 
+                    |_| "expected ')'".to_owned(),
+                )?;
+
+                expr = Expr::Call(expr.to_box(), args, paren);
+            } 
+            else {
+                break Ok(expr);
+            }
+        }
+    }
+
+    fn arguments(&mut self) -> Result<Vec<Expr>, SyntaxError> {
+        let mut args = vec![];
+
+        // The parser doesn't match (advance) the ')' since `Parser::call` already does so.
+        if self.check_curr(&TokenKind::Op(Op::RightParen)) {
+            return Ok(args);
+        }
+
+        loop {
+            args.push(self.expression()?);
+
+            if args.len() > 255 {
+                let ctx = self.peek().clone();
+                let err = SyntaxError::new(
+                    ctx.line(),
+                    "cannot have more than 255 arguments".to_owned(),
+                        Some(ctx),
+                );
+
+                break Err(err);
+            }
+
+            if !self.match_any([TokenKind::Op(Op::Comma)]) {
+                break Ok(args);
+            }
         }
     }
 

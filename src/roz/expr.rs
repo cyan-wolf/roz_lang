@@ -1,3 +1,7 @@
+pub mod value;
+
+pub use value::Value;
+
 use std::fmt::Display;
 use super::token::Token;
 
@@ -9,50 +13,12 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Var(Token),
     Assign(Token, Box<Expr>),
+    Call(Box<Expr>, Vec<Expr>, Token),
 }
 
 impl Expr {
     pub fn to_box(self) -> Box<Self> {
         Box::new(self)
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Value {
-    Num(f64),
-    Str(String),
-    Bool(bool),
-    Nil,
-}
-
-impl Value {
-    /// Returns the type of the value as a string.
-    pub fn get_type(&self) -> String {
-        match self {
-            Value::Num(_) => "<number>".to_owned(),
-            Value::Str(_) => "<string>".to_owned(),
-            Value::Bool(_) => "<boolean>".to_owned(),
-            Value::Nil => "<nil>".to_owned(),
-        }
-    }
-
-    pub fn to_bool(&self) -> bool {
-        match self {
-            Value::Bool(bool) => *bool,
-            Value::Nil => false,
-            _ => true,
-        }
-    }
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &*self {
-            Value::Num(num) => write!(f, "{num}"),
-            Value::Str(str) => write!(f, "{str}"),
-            Value::Bool(bool) => write!(f, "{bool}"),
-            Value::Nil => write!(f, "nil"),
-        }
     }
 }
 
@@ -67,6 +33,7 @@ impl Display for Expr {
             Expr::Grouping(expr) => write!(f, "(group {expr})"),
             Expr::Var(ident) => write!(f, "var({ident})"),
             Expr::Assign(lvalue, expr) => write!(f, "({lvalue} = {expr})"),
+            Expr::Call(callee, args, _) => write!(f, "({callee} calls {args:?})"),
         }
     }
 }
