@@ -18,7 +18,7 @@ pub fn run_file(file_name: String) -> Result<(), io::Error> {
         .chars()
         .collect();
 
-    match run(content) {
+    match run(&mut Interpreter::new(), content) {
         Err(err) => {
             eprintln!("{err}");
 
@@ -39,6 +39,8 @@ pub fn run_file(file_name: String) -> Result<(), io::Error> {
 
 // Runs an interactive prompt.
 pub fn run_prompt() -> Result<(), io::Error> {
+    let mut interpreter = Interpreter::new();
+
     loop {
         print!("> ");
         io::stdout().flush()?;
@@ -50,7 +52,7 @@ pub fn run_prompt() -> Result<(), io::Error> {
             .chars()
             .collect();
 
-        match run(content) {
+        match run(&mut interpreter, content) {
             Err(err) => {
                 eprintln!("{err}");
             },
@@ -59,13 +61,12 @@ pub fn run_prompt() -> Result<(), io::Error> {
     }
 }
 
-fn run(content: Vec<char>) -> Result<(), RozError> {
+fn run(interpreter: &mut Interpreter, content: Vec<char>) -> Result<(), RozError> {
     let scanner = Scanner::new(content);
     let tokens = scanner.scan_tokens()?;
 
     let statements = Parser::new(tokens).parse()?;
 
-    let mut interpreter = Interpreter::new();
     interpreter.interpret(statements)?;
 
     Ok(())
