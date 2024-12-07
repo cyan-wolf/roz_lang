@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use environment::{Environment, RcCell};
 
-use super::expr::value::NativeFn;
+use super::expr::value::NativeFun;
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
 use super::token::{Keyword, Op, Token, TokenKind};
@@ -28,6 +28,10 @@ impl Interpreter {
         }
 
         Ok(())
+    }
+
+    pub fn environment(&self) -> RcCell<Environment> {
+        Rc::clone(&self.curr_env)
     }
 
     fn execute(&mut self, stmt: Stmt) -> Result<(), RuntimeError> {
@@ -86,6 +90,11 @@ impl Interpreter {
                 ]);
                 
                 self.execute(stmt)?;
+            },
+            Stmt::Fun(name, params, body) => {
+                self.curr_env
+                    .borrow_mut()
+                    .define(name, unimplemented!());
             },
         }
 
@@ -435,11 +444,11 @@ impl Interpreter {
 
         globals.define(
             "println".to_owned(), 
-            Value::NativeFn(NativeFn::Println),
+            Value::NativeFun(NativeFun::Println),
         );
         globals.define(
             "clock".to_owned(), 
-            Value::NativeFn(NativeFn::Clock),
+            Value::NativeFun(NativeFun::Clock),
         );
 
         globals

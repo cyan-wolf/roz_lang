@@ -1,13 +1,14 @@
 use std::fmt::Display;
 
-use crate::roz::{error::RuntimeError, interpreter::Interpreter, token::Token};
+use crate::roz::{error::RuntimeError, interpreter::Interpreter, stmt::Stmt, token::Token};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Num(f64),
     Str(String),
     Bool(bool),
-    NativeFn(NativeFn),
+    NativeFun(NativeFun),
+    Fun(Vec<Token>, Vec<Stmt>),
     Nil,
 }
 
@@ -18,7 +19,8 @@ impl Value {
             Value::Num(_) => "<number>".to_owned(),
             Value::Str(_) => "<string>".to_owned(),
             Value::Bool(_) => "<boolean>".to_owned(),
-            Value::NativeFn(_) => "<native fn>".to_owned(),
+            Value::NativeFun(_) => "<native fun>".to_owned(),
+            Value::Fun(_, _) => "<fun>".to_owned(),
             Value::Nil => "<nil>".to_owned(),
         }
     }
@@ -33,14 +35,28 @@ impl Value {
 
     pub fn is_callable(&self) -> bool {
         match self {
-            Value::NativeFn(_) => true,
+            Value::NativeFun(_) => true,
+            Value::Fun(..) => true,
             _ => false,
         }
     }
 
     pub fn into_callable(self) -> Option<Callable> {
         match self {
-            Value::NativeFn(native_fn) => Some(native_fn.into()),
+            Value::NativeFun(native_fn) => Some(native_fn.into()),
+            Value::Fun(params, body) => {
+                let func = |intepreter: &mut _, args: Vec<_>, _ctx| {
+                    // TODO: move this function into a submodule of `interpreter`.
+                    // Move the `Callable` definitions to this new submodule.
+                    // Have a `Callable::from_value -> Option<Self>` function.
+                    // Having this functionality in the `value` module requires 
+                    // making too many things public.
+                    
+                    todo!()
+                };
+
+                Some(Callable::new(params.len(), Box::new(func)))
+            },
             _ => None,
         }
     }
@@ -52,22 +68,23 @@ impl Display for Value {
             Value::Num(num) => write!(f, "{num}"),
             Value::Str(str) => write!(f, "{str}"),
             Value::Bool(bool) => write!(f, "{bool}"),
-            Value::NativeFn(_) => write!(f, "{{native function}}"),
+            Value::NativeFun(_) => write!(f, "{{native function}}"),
+            Value::Fun(..) => write!(f, "{{function}}"),
             Value::Nil => write!(f, "nil"),
         }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum NativeFn {
+pub enum NativeFun {
     Println,
     Clock,
 }
 
-impl From<NativeFn> for Callable {
-    fn from(native_fn: NativeFn) -> Self {
+impl From<NativeFun> for Callable {
+    fn from(native_fn: NativeFun) -> Self {
         match native_fn {
-            NativeFn::Println => {
+            NativeFun::Println => {
                 let func = |_intepreter: &mut _, args: Vec<_>, _ctx| {
                     let arg = args.into_iter().next().unwrap();
                     println!("{arg}");
@@ -76,7 +93,7 @@ impl From<NativeFn> for Callable {
 
                 Callable::new(1, Box::new(func))
             },
-            NativeFn::Clock => {
+            NativeFun::Clock => {
                 use std::time;
 
                 let func = |_interpreter: &mut _, _args, ctx| {

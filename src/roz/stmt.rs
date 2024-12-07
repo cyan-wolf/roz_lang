@@ -1,6 +1,6 @@
-use super::expr::Expr;
+use super::{expr::Expr, token::Token};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
@@ -9,4 +9,5 @@ pub enum Stmt {
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     While(Expr, Box<Stmt>),
     For(Box<Stmt>, Expr, Expr, Box<Stmt>),
+    Fun(String, Vec<Token>, Box<Stmt>),
 }

@@ -5,7 +5,7 @@ pub use value::Value;
 use std::fmt::Display;
 use super::token::Token;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Literal(Value),
     Unary(Token, Box<Expr>),

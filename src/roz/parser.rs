@@ -48,6 +48,9 @@ impl Parser {
         else if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
             self.statement_declaration()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::Fun)]) {
+            self.statement_fn_decl()
+        }
         else if self.match_any([TokenKind::Op(Op::LeftBrace)]) {
             self.statement_block()
         }
@@ -217,6 +220,43 @@ impl Parser {
         );
 
         Ok(stmt)
+    }
+
+    fn statement_fn_decl(&mut self) -> Result<Stmt, SyntaxError> {
+        if let TokenKind::Literal(Literal::Ident(ident)) = self.peek().kind() {
+            let fun_name = ident.clone();
+            self.advance();
+
+            self.try_match(
+                &TokenKind::Op(Op::LeftParen),
+                |_| "expected '(' after function name".to_owned(),
+            )?;
+            let params = self.parameters()?;
+
+            self.try_match(
+                &TokenKind::Op(Op::RightParen),
+                |_| "expected ')'".to_owned(),
+            )?;
+
+            self.try_match(
+                &TokenKind::Op(Op::LeftBrace),
+                |_| "expected '{' after parameter list".to_owned(),
+            )?;
+            let block = self.statement_block()?;
+
+            let stmt = Stmt::Fun(fun_name, params, Box::new(block));
+            Ok(stmt)
+        } 
+        else {
+            let token = self.peek().clone();
+            let err = SyntaxError::new(
+                token.line(),
+                "expected identifier".to_owned(),
+                Some(token),
+            );
+
+            Err(err)
+        }
     }
 
     /// Parses an expression.
@@ -389,6 +429,49 @@ impl Parser {
 
             if !self.match_any([TokenKind::Op(Op::Comma)]) {
                 break Ok(args);
+            }
+        }
+    }
+
+    fn parameters(&mut self) -> Result<Vec<Token>, SyntaxError> { 
+        let mut params = vec![];
+
+        // The parser doesn't match (advance) the ')' since 
+        // `Parser::statement_fn_decl` already does so.
+        if self.check_curr(&TokenKind::Op(Op::RightParen)) {
+            return Ok(params);
+        }
+
+        loop {
+            // Parse an individual parameter.
+            if let TokenKind::Literal(Literal::Ident(..)) = self.peek().kind() {
+                self.advance();
+
+                let ident = self.prev().clone();
+                params.push(ident);
+            } else {
+                let token = self.peek().clone();
+                let err = SyntaxError::new(
+                    token.line(),
+                    "expected parameter".to_owned(),
+                    Some(token),
+                );
+                break Err(err);
+            }
+
+            if params.len() > 255 {
+                let ctx = self.peek().clone();
+                let err = SyntaxError::new(
+                    ctx.line(),
+                    "cannot have more than 255 parameters".to_owned(),
+                        Some(ctx),
+                );
+
+                break Err(err);
+            }
+
+            if !self.match_any([TokenKind::Op(Op::Comma)]) {
+                break Ok(params);
             }
         }
     }
