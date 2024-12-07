@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use environment::{Environment, RcCell};
 
+use super::expr::value::NativeFn;
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
 use super::token::{Keyword, Op, Token, TokenKind};
@@ -15,8 +16,15 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
+        let mut globals = Environment::new();
+
+        globals.define(
+            "clock".to_owned(), 
+            Value::NativeFn(NativeFn::Clock),
+        );
+
         Self {
-            curr_env: Environment::new().to_rc_cell(),
+            curr_env: globals.to_rc_cell(),
         }
     }
 
@@ -424,6 +432,8 @@ impl Interpreter {
             return Err(err);
         }
         
-        unimplemented!()
+        // Turn the callable into an runnable Rust function.
+        let func = callable.into_runtime_callable();
+        func(self, args, ctx)
     }
 }

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::roz::interpreter::Interpreter;
+use crate::roz::{error::RuntimeError, interpreter::Interpreter, token::Token};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -67,10 +67,21 @@ impl From<NativeFn> for Callable {
     fn from(native_fn: NativeFn) -> Self {
         match native_fn {
             NativeFn::Clock => {
-                let func = |interpreter, args| {
-                    let now = std::time::Instant::now();
-                    
-                    unimplemented!()
+                use std::time;
+
+                let func = |_interpreter: &mut _, _args, ctx| {
+                    let now = time::SystemTime::now();
+
+                    let elapsed = now.duration_since(time::UNIX_EPOCH)
+                        .map_err(|_| {
+                            RuntimeError::new(
+                                "system time before Unix Epoch".to_owned(), 
+                                ctx,
+                            )
+                        })?
+                        .as_millis();
+
+                    Ok(Value::Num((elapsed as f64) / 1000.0))
                 };
 
                 Callable::new(0, Box::new(func))
@@ -79,15 +90,17 @@ impl From<NativeFn> for Callable {
     }
 }
 
-type CallableFunc = Box<dyn Fn(Interpreter, Vec<Value>) -> Value>;
+/// A function callable from the interpreter itself.
+pub type RuntimeCallable = 
+    Box<dyn for<'a> Fn(&'a mut Interpreter, Vec<Value>, Token) -> Result<Value, RuntimeError>>;
 
 pub struct Callable {
     arity: usize,
-    func: CallableFunc,
+    func: RuntimeCallable,
 }
 
 impl Callable {
-    pub fn new(arity: usize, func: CallableFunc) -> Self {
+    pub fn new(arity: usize, func: RuntimeCallable) -> Self {
         Self {
             arity,
             func,
@@ -98,7 +111,7 @@ impl Callable {
         self.arity
     }
 
-    pub fn into_call(self) -> CallableFunc {
+    pub fn into_runtime_callable(self) -> RuntimeCallable {
         self.func
     }
 }
