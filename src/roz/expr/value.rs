@@ -60,12 +60,22 @@ impl Display for Value {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum NativeFn {
+    Println,
     Clock,
 }
 
 impl From<NativeFn> for Callable {
     fn from(native_fn: NativeFn) -> Self {
         match native_fn {
+            NativeFn::Println => {
+                let func = |_intepreter: &mut _, args: Vec<_>, _ctx| {
+                    let arg = args.into_iter().next().unwrap();
+                    println!("{arg}");
+                    Ok(Value::Nil)
+                };
+
+                Callable::new(1, Box::new(func))
+            },
             NativeFn::Clock => {
                 use std::time;
 

@@ -16,15 +16,8 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut globals = Environment::new();
-
-        globals.define(
-            "clock".to_owned(), 
-            Value::NativeFn(NativeFn::Clock),
-        );
-
         Self {
-            curr_env: globals.to_rc_cell(),
+            curr_env: Interpreter::globals().to_rc_cell(),
         }
     }
 
@@ -435,5 +428,20 @@ impl Interpreter {
         // Turn the callable into an runnable Rust function.
         let func = callable.into_runtime_callable();
         func(self, args, ctx)
+    }
+
+    fn globals() -> Environment {
+        let mut globals = Environment::new();
+
+        globals.define(
+            "println".to_owned(), 
+            Value::NativeFn(NativeFn::Println),
+        );
+        globals.define(
+            "clock".to_owned(), 
+            Value::NativeFn(NativeFn::Clock),
+        );
+
+        globals
     }
 }
