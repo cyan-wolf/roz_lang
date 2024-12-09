@@ -92,9 +92,16 @@ impl Interpreter {
                 self.execute(stmt)?;
             },
             Stmt::Fun(name, params, body) => {
+                // TODO: Rework the statement-related methods so that they use Vec<Stmt>,
+                // so that this is unnecessary.
+                let stmts = match *body {
+                    Stmt::Block(vec) => vec,
+                    _ => panic!("unexpected error while unpacking statement"),
+                };
+
                 self.curr_env
                     .borrow_mut()
-                    .define(name, unimplemented!());
+                    .define(name.clone(), Value::Fun(Some(name), params, stmts));
             },
         }
 
@@ -417,10 +424,23 @@ impl Interpreter {
 
     fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeError> {
         match callee {
-            Value::Fun(params, body) => {
+            Value::Fun(_, params, body) => {
                 self.check_arity(&args, params.len(), &ctx)?;
 
-                unimplemented!()
+                // Make a local scope for the function.
+                let mut local_fun_scope = Environment::with_enclosing(
+                    Rc::clone(&self.curr_env)
+                );
+
+                // Bind the arguments to the parameters.
+                for (param, arg) in params.into_iter().zip(args) {
+                    let ident = Environment::get_ident_from_token(&param).to_owned();
+                    local_fun_scope.define(ident, arg);
+                }
+
+                self.execute_block(body, local_fun_scope.to_rc_cell())?;
+
+                Ok(Value::Nil)
             },
             Value::NativeFun(native_fun) => {
                 self.check_arity(&args, native_fun.arity(), &ctx)?;

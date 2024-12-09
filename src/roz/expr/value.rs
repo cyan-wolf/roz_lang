@@ -8,7 +8,7 @@ pub enum Value {
     Str(String),
     Bool(bool),
     NativeFun(NativeFun),
-    Fun(Vec<Token>, Vec<Stmt>),
+    Fun(Option<String>, Vec<Token>, Vec<Stmt>),
     Nil,
 }
 
@@ -20,7 +20,7 @@ impl Value {
             Value::Str(_) => "<string>".to_owned(),
             Value::Bool(_) => "<boolean>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
-            Value::Fun(_, _) => "<fun>".to_owned(),
+            Value::Fun(_, _, _) => "<fun>".to_owned(),
             Value::Nil => "<nil>".to_owned(),
         }
     }
@@ -40,8 +40,16 @@ impl Display for Value {
             Value::Num(num) => write!(f, "{num}"),
             Value::Str(str) => write!(f, "{str}"),
             Value::Bool(bool) => write!(f, "{bool}"),
-            Value::NativeFun(_) => write!(f, "{{native function}}"),
-            Value::Fun(..) => write!(f, "{{function}}"),
+            Value::NativeFun(native_fun) => {
+                write!(f, "{{native function {native_fun}}}")
+            },
+            Value::Fun(name, ..) => {
+                if let Some(name) = name {
+                    write!(f, "{{function {name}}}")
+                } else {
+                    write!(f, "{{function}}")
+                }
+            },
             Value::Nil => write!(f, "nil"),
         }
     }
@@ -58,6 +66,15 @@ impl NativeFun {
         match self {
             Self::Println => 1,
             Self::Clock => 0,
+        }
+    }
+}
+
+impl Display for NativeFun {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NativeFun::Println => write!(f, "println"),
+            NativeFun::Clock => write!(f, "clock"),
         }
     }
 }

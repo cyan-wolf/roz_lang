@@ -75,7 +75,7 @@ impl Environment {
         }
     }
 
-    fn get_ident_from_token(token: &Token) -> &str {
+    pub fn get_ident_from_token(token: &Token) -> &str {
         match token.kind() {
             TokenKind::Literal(Literal::Ident(ident)) => ident,
             _ => panic!("unexpected error: '{token}' was not an identifier"),
