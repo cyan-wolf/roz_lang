@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::roz::{error::RuntimeError, interpreter::Interpreter, stmt::Stmt, token::Token};
+use crate::roz::{stmt::Stmt, token::Token};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -32,34 +32,6 @@ impl Value {
             _ => true,
         }
     }
-
-    pub fn is_callable(&self) -> bool {
-        match self {
-            Value::NativeFun(_) => true,
-            Value::Fun(..) => true,
-            _ => false,
-        }
-    }
-
-    pub fn into_callable(self) -> Option<Callable> {
-        match self {
-            Value::NativeFun(native_fn) => Some(native_fn.into()),
-            Value::Fun(params, body) => {
-                let func = |intepreter: &mut _, args: Vec<_>, _ctx| {
-                    // TODO: move this function into a submodule of `interpreter`.
-                    // Move the `Callable` definitions to this new submodule.
-                    // Have a `Callable::from_value -> Option<Self>` function.
-                    // Having this functionality in the `value` module requires 
-                    // making too many things public.
-                    
-                    todo!()
-                };
-
-                Some(Callable::new(params.len(), Box::new(func)))
-            },
-            _ => None,
-        }
-    }
 }
 
 impl Display for Value {
@@ -81,64 +53,11 @@ pub enum NativeFun {
     Clock,
 }
 
-impl From<NativeFun> for Callable {
-    fn from(native_fn: NativeFun) -> Self {
-        match native_fn {
-            NativeFun::Println => {
-                let func = |_intepreter: &mut _, args: Vec<_>, _ctx| {
-                    let arg = args.into_iter().next().unwrap();
-                    println!("{arg}");
-                    Ok(Value::Nil)
-                };
-
-                Callable::new(1, Box::new(func))
-            },
-            NativeFun::Clock => {
-                use std::time;
-
-                let func = |_interpreter: &mut _, _args, ctx| {
-                    let now = time::SystemTime::now();
-
-                    let elapsed = now.duration_since(time::UNIX_EPOCH)
-                        .map_err(|_| {
-                            RuntimeError::new(
-                                "system time before Unix Epoch".to_owned(), 
-                                ctx,
-                            )
-                        })?
-                        .as_millis();
-
-                    Ok(Value::Num((elapsed as f64) / 1000.0))
-                };
-
-                Callable::new(0, Box::new(func))
-            },
-        }
-    }
-}
-
-/// A function callable from the interpreter itself.
-pub type RuntimeCallable = 
-    Box<dyn for<'a> Fn(&'a mut Interpreter, Vec<Value>, Token) -> Result<Value, RuntimeError>>;
-
-pub struct Callable {
-    arity: usize,
-    func: RuntimeCallable,
-}
-
-impl Callable {
-    pub fn new(arity: usize, func: RuntimeCallable) -> Self {
-        Self {
-            arity,
-            func,
-        }
-    }
-
+impl NativeFun {
     pub fn arity(&self) -> usize {
-        self.arity
-    }
-
-    pub fn into_runtime_callable(self) -> RuntimeCallable {
-        self.func
+        match self {
+            Self::Println => 1,
+            Self::Clock => 0,
+        }
     }
 }

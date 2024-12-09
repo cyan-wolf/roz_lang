@@ -416,27 +416,62 @@ impl Interpreter {
     }
 
     fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeError> {
-        if !callee.is_callable() {
-            let err = RuntimeError::new(
-                format!("value '{callee}' is not callable"),
-                ctx,
-            );
-            return Err(err);
-        }
-        let callable = callee.into_callable()
-            .expect("unexpected error: could not call value");
+        match callee {
+            Value::Fun(params, body) => {
+                self.check_arity(&args, params.len(), &ctx)?;
 
-        if args.len() != callable.arity() {
+                unimplemented!()
+            },
+            Value::NativeFun(native_fun) => {
+                self.check_arity(&args, native_fun.arity(), &ctx)?;
+
+                self.call_native_fun(native_fun, args, ctx)
+            },
+            _ => {
+                let err = RuntimeError::new(
+                    format!("value '{callee}' is not callable"),
+                    ctx,
+                );
+                return Err(err);
+            },
+        }
+    }
+
+    fn check_arity(&self, args: &[Value], arity: usize, ctx: &Token) -> Result<(), RuntimeError> {
+        if args.len() != arity {
             let err = RuntimeError::new(
-                format!("expected {} arguments, but got {}", args.len(), callable.arity()),
-                ctx,
+                format!("expected {} arguments, but got {}", args.len(), arity),
+                ctx.clone(),
             );
             return Err(err);
         }
-        
-        // Turn the callable into an runnable Rust function.
-        let func = callable.into_runtime_callable();
-        func(self, args, ctx)
+        Ok(())
+    }
+
+    fn call_native_fun(&mut self, native_fun: NativeFun, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeError> {
+        match native_fun {
+            NativeFun::Println => {
+                let arg = args.into_iter().next().unwrap();
+                println!("{arg}");
+                Ok(Value::Nil)
+            },
+            NativeFun::Clock => {
+                use std::time;
+
+                let now = time::SystemTime::now();
+
+                let elapsed = now.duration_since(time::UNIX_EPOCH)
+                    .map_err(|_| {
+                        RuntimeError::new(
+                            "system time before Unix Epoch".to_owned(), 
+                            ctx,
+                        )
+                    })?
+                    .as_millis();
+
+                Ok(Value::Num((elapsed as f64) / 1000.0))
+            },
+        }
     }
 
     fn globals() -> Environment {

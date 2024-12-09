@@ -1,4 +1,4 @@
-use super::error::{RozError, RuntimeError, SyntaxError};
+use super::error::{RozError, SyntaxError};
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
