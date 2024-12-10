@@ -63,6 +63,9 @@ impl Parser {
         else if self.match_any([TokenKind::Keyword(Keyword::For)]) {
             self.statement_for()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::Return)]) {
+            self.statement_return()
+        }
         else {
             self.statement_expr()
         }
@@ -257,6 +260,23 @@ impl Parser {
 
             Err(err)
         }
+    }
+
+    fn statement_return(&mut self) -> Result<Stmt, SyntaxError> {
+        let keyword = self.prev().clone();
+
+        let ret_value = if !self.check_curr(&TokenKind::Op(Op::Semicolon)) {
+            self.expression()?
+        } else {
+            Expr::Literal(Value::Nil)
+        };
+
+        self.try_match(
+            &TokenKind::Op(Op::Semicolon),
+            |_| "expected ';' after return value".to_owned(), 
+        )?;
+
+        Ok(Stmt::Return(keyword, ret_value))
     }
 
     /// Parses an expression.

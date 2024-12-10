@@ -10,4 +10,5 @@ pub enum Stmt {
     While(Expr, Box<Stmt>),
     For(Box<Stmt>, Expr, Expr, Box<Stmt>),
     Fun(String, Vec<Token>, Box<Stmt>),
+    Return(Token, Expr),
 }

@@ -10,6 +10,18 @@ use super::stmt::Stmt;
 use super::token::{Keyword, Op, Token, TokenKind};
 use super::error::{RozError, RuntimeError};
 
+// Models runtime errors and function return values.
+pub enum RuntimeOutcome {
+    Error(RuntimeError),
+    Return(Value),
+}
+
+impl From<RuntimeError> for RuntimeOutcome {
+    fn from(err: RuntimeError) -> Self {
+        Self::Error(err)
+    }
+}
+
 pub struct Interpreter {
     curr_env: RcCell<Environment>,
 }
@@ -23,18 +35,22 @@ impl Interpreter {
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RozError> {
         for stmt in statements {
-            self.execute(stmt)
-                .map_err(RozError::Runtime)?;
+            match self.execute(stmt) {
+                Err(RuntimeOutcome::Error(err)) => {
+                    // Propogate `RuntimeError`s.
+                    return Err(RozError::Runtime(err));
+                },
+                Err(RuntimeOutcome::Return(..)) => {
+                    panic!("unexpected error: top-level return");
+                },
+                Ok(_) => {},
+            }
         }
 
         Ok(())
     }
 
-    pub fn environment(&self) -> RcCell<Environment> {
-        Rc::clone(&self.curr_env)
-    }
-
-    fn execute(&mut self, stmt: Stmt) -> Result<(), RuntimeError> {
+    fn execute(&mut self, stmt: Stmt) -> Result<(), RuntimeOutcome> {
         match stmt {
             Stmt::Expr(expr) => {
                 let _ = self.evaluate(expr)?; // value is discarded
@@ -103,13 +119,18 @@ impl Interpreter {
                     .borrow_mut()
                     .define(name.clone(), Value::Fun(Some(name), params, stmts));
             },
+            Stmt::Return(_, ret_value) => {
+                let val = self.evaluate(ret_value)?;
+
+                return Err(RuntimeOutcome::Return(val));
+            },
         }
 
         Ok(())
     }
 
     fn execute_block(&mut self, statements: Vec<Stmt>, 
-        new_env: RcCell<Environment>) -> Result<(), RuntimeError> 
+        new_env: RcCell<Environment>) -> Result<(), RuntimeOutcome> 
     {
         // Set the current environment to be the new one.
         let prev_env = Rc::clone(&self.curr_env);
@@ -117,7 +138,7 @@ impl Interpreter {
 
         // Execute the block's statements under this new environment, 
         // and collect their result.
-        let result: Result<(), RuntimeError> = statements.into_iter()
+        let result: Result<(), RuntimeOutcome> = statements.into_iter()
             .map(|stmt| self.execute(stmt))
             .collect();
 
@@ -128,7 +149,7 @@ impl Interpreter {
         result
     }
 
-    fn evaluate(&mut self, expr: Expr) -> Result<Value, RuntimeError> {
+    fn evaluate(&mut self, expr: Expr) -> Result<Value, RuntimeOutcome> {
         match expr {
             Expr::Literal(value) => Ok(value),
             Expr::Unary(token, expr) => {
@@ -143,7 +164,7 @@ impl Interpreter {
                                 format!("operand `{operand}` was not a number"),
                                 token, 
                             );
-                            Err(err)
+                            Err(err)?
                         }
                     },
                     &TokenKind::Op(Op::Bang) => {
@@ -163,7 +184,7 @@ impl Interpreter {
                             format!("unknown unary operator `{token}`"),
                             token, 
                         );
-                        Err(err)
+                        Err(err)?
                     },
                 }
             },
@@ -188,7 +209,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -208,7 +229,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -228,7 +249,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -243,7 +264,7 @@ impl Interpreter {
                                         "division by zero".to_owned(),
                                         token,
                                     );
-                                    return Err(err);
+                                    return Err(err)?;
                                 }
 
                                 Ok(Value::Num(num1 / num2))
@@ -256,7 +277,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -279,7 +300,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -302,7 +323,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -325,7 +346,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -348,7 +369,7 @@ impl Interpreter {
                                     ),
                                     token, 
                                 );
-                                Err(err)
+                                Err(err)?
                             },
                         }
                     },
@@ -391,15 +412,17 @@ impl Interpreter {
                             format!("unknown binary operator `{token}`"),
                             token, 
                         );
-                        Err(err)
+                        Err(err)?
                     },
                 }
             },
             Expr::Grouping(expr) => self.evaluate(*expr),
             Expr::Var(ident) => {
-                self.curr_env
+                let val = self.curr_env
                     .borrow()
-                    .retrieve(ident)
+                    .retrieve(ident)?;
+
+                Ok(val)
             },
             Expr::Assign(lvalue, expr) => {
                 let rvalue = self.evaluate(*expr)?;
@@ -422,7 +445,7 @@ impl Interpreter {
         }
     }
 
-    fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeError> {
+    fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {
         match callee {
             Value::Fun(_, params, body) => {
                 self.check_arity(&args, params.len(), &ctx)?;
@@ -438,37 +461,45 @@ impl Interpreter {
                     local_fun_scope.define(ident, arg);
                 }
 
-                self.execute_block(body, local_fun_scope.to_rc_cell())?;
+                let fn_res = self.execute_block(body, local_fun_scope.to_rc_cell());
 
-                Ok(Value::Nil)
+                match fn_res {
+                    // Return the function's return value if one is present.
+                    Err(RuntimeOutcome::Return(val)) => Ok(val),
+                    res => {
+                        // Propogate any errors and return `nil` as a default value.
+                        res?;
+                        Ok(Value::Nil)
+                    },
+                }
             },
             Value::NativeFun(native_fun) => {
                 self.check_arity(&args, native_fun.arity(), &ctx)?;
 
-                self.call_native_fun(native_fun, args, ctx)
+                Ok(self.call_native_fun(native_fun, args, ctx)?)
             },
             _ => {
                 let err = RuntimeError::new(
                     format!("value '{callee}' is not callable"),
                     ctx,
                 );
-                return Err(err);
+                return Err(err)?;
             },
         }
     }
 
-    fn check_arity(&self, args: &[Value], arity: usize, ctx: &Token) -> Result<(), RuntimeError> {
+    fn check_arity(&self, args: &[Value], arity: usize, ctx: &Token) -> Result<(), RuntimeOutcome> {
         if args.len() != arity {
             let err = RuntimeError::new(
                 format!("expected {} arguments, but got {}", args.len(), arity),
                 ctx.clone(),
             );
-            return Err(err);
+            return Err(err)?;
         }
         Ok(())
     }
 
-    fn call_native_fun(&mut self, native_fun: NativeFun, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeError> {
+    fn call_native_fun(&mut self, native_fun: NativeFun, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {
         match native_fun {
             NativeFun::Println => {
                 let arg = args.into_iter().next().unwrap();
