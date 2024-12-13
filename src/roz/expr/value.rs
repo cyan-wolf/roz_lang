@@ -1,14 +1,18 @@
 use std::fmt::Display;
 
-use crate::roz::{stmt::Stmt, token::Token};
+use crate::roz::{
+    stmt::Stmt, 
+    token::Token,
+    interpreter::{Environment, RcCell},
+};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Num(f64),
     Str(String),
     Bool(bool),
     NativeFun(NativeFun),
-    Fun(Option<String>, Vec<Token>, Vec<Stmt>),
+    Fun(Option<String>, Vec<Token>, Vec<Stmt>, RcCell<Environment>),
     Nil,
 }
 
@@ -20,7 +24,7 @@ impl Value {
             Value::Str(_) => "<string>".to_owned(),
             Value::Bool(_) => "<boolean>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
-            Value::Fun(_, _, _) => "<fun>".to_owned(),
+            Value::Fun(..) => "<fun>".to_owned(),
             Value::Nil => "<nil>".to_owned(),
         }
     }
@@ -30,6 +34,21 @@ impl Value {
             Value::Bool(bool) => *bool,
             Value::Nil => false,
             _ => true,
+        }
+    }
+
+    /// Compares two objects for general equality.
+    /// Two values are equal if their type and contents are the same.
+    /// Note: User defined functions cannot be compared, comparisons 
+    /// between them are always false.
+    pub fn equals(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Num(a), Value::Num(b)) => a == b,
+            (Value::Str(a), Value::Str(b)) => a == b,
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::NativeFun(a), Value::NativeFun(b)) => a == b,
+            (Value::Nil, Value::Nil) => true,
+            _ => false,
         }
     }
 }

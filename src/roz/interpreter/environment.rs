@@ -9,6 +9,7 @@ use crate::roz::{
 /// A reference counted mutable pointer.
 pub type RcCell<T> = Rc<RefCell<T>>;
 
+#[derive(Debug)]
 pub struct Environment {
     enclosing: Option<RcCell<Environment>>,
     map: HashMap<String, Value>,

@@ -1,9 +1,8 @@
-mod environment;
+pub mod environment;
+
+pub use environment::{Environment, RcCell};
 
 use std::rc::Rc;
-
-use environment::{Environment, RcCell};
-
 use super::expr::value::NativeFun;
 use super::expr::{Expr, Value};
 use super::stmt::Stmt;
@@ -104,9 +103,19 @@ impl Interpreter {
                 self.execute(stmt)?;
             },
             Stmt::Fun(name, params, body) => {
+                // Make the function object. Stores a reference to the 
+                // current environment (at definition time), which allows 
+                // the implementation of closures.
+                let fun = Value::Fun(
+                    Some(name.clone()), 
+                    params, 
+                    body, 
+                    Rc::clone(&self.curr_env),
+                );
+
                 self.curr_env
                     .borrow_mut()
-                    .define(name.clone(), Value::Fun(Some(name), params, body));
+                    .define(name, fun);
             },
             Stmt::Return(_, ret_value) => {
                 let val = self.evaluate(ret_value)?;
@@ -366,13 +375,13 @@ impl Interpreter {
                         let op1 = self.evaluate(*expr1)?;
                         let op2 = self.evaluate(*expr2)?;
 
-                        Ok(Value::Bool(op1 == op2))
+                        Ok(Value::Bool(op1.equals(&op2)))
                     },
                     &TokenKind::Op(Op::BangEq) => {
                         let op1 = self.evaluate(*expr1)?;
                         let op2 = self.evaluate(*expr2)?;
 
-                        Ok(Value::Bool(op1 != op2))
+                        Ok(Value::Bool(!op1.equals(&op2)))
                     },
                     // Evaluates to the "truthy" value, if present.
                     &TokenKind::Keyword(Keyword::Or) => {
@@ -436,21 +445,23 @@ impl Interpreter {
 
     fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {
         match callee {
-            Value::Fun(_, params, body) => {
+            Value::Fun(_, params, body, env_at_def) => {
                 self.check_arity(&args, params.len(), &ctx)?;
 
-                let local_fun_scope = self.new_env_with_enclosing();
+                // The function's local environment is enclosed by the 
+                // environment present at definition time; allows closures.
+                let mut local_fun_scope = Environment::with_enclosing(env_at_def);
 
                 // Bind the arguments to the parameters.
                 for (param, arg) in params.into_iter().zip(args) {
                     let ident = Environment::get_ident_from_token(&param).to_owned();
-
-                    local_fun_scope
-                        .borrow_mut()
-                        .define(ident, arg);
+                    local_fun_scope.define(ident, arg);
                 }
 
-                let fn_res = self.execute_scoped(body, local_fun_scope);
+                let fn_res = self.execute_scoped(
+                    body, 
+                    local_fun_scope.to_rc_cell()
+                );
                 match fn_res {
                     // Return the function's return value if one is present.
                     Err(RuntimeOutcome::Return(val)) => Ok(val),
