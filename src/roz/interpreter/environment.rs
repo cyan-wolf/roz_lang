@@ -39,7 +39,7 @@ impl Environment {
     }
 
     pub fn retrieve(&self, token: Token) -> Result<Value, RuntimeError> {
-        let ident = Self::get_ident_from_token(&token);
+        let ident = token.extract_ident();
 
         if let Some(val) = self.map.get(ident) {
             Ok(val.clone())
@@ -57,7 +57,7 @@ impl Environment {
     }
 
     pub fn assign(&mut self, lvalue: Token, value: Value) -> Result<(), RuntimeError> {
-        let ident = Self::get_ident_from_token(&lvalue);
+        let ident = lvalue.extract_ident();
 
         if let Some(entry) = self.map.get_mut(ident) {
             *entry = value;
@@ -73,13 +73,6 @@ impl Environment {
             );
 
             Err(err)
-        }
-    }
-
-    pub fn get_ident_from_token(token: &Token) -> &str {
-        match token.kind() {
-            TokenKind::Literal(Literal::Ident(ident)) => ident,
-            _ => panic!("unexpected error: '{token}' was not an identifier"),
         }
     }
 }

@@ -19,6 +19,15 @@ impl Token {
     pub fn kind(&self) -> &TokenKind {
         &self.kind
     }
+
+    /// Returns the string identifier of this token. 
+    /// Note: panics if this token is not an identifier.
+    pub fn extract_ident(&self) -> &str {
+        match self.kind {
+            TokenKind::Literal(Literal::Ident(ref ident)) => ident,
+            _ => panic!("unexpected error: token '{self}' was not an identifier"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

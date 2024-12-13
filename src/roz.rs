@@ -4,6 +4,7 @@ mod error;
 mod expr;
 mod stmt;
 mod parser;
+mod resolver;
 mod interpreter;
 
 use std::io::{self, Write};

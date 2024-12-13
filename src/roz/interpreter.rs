@@ -454,7 +454,7 @@ impl Interpreter {
 
                 // Bind the arguments to the parameters.
                 for (param, arg) in params.into_iter().zip(args) {
-                    let ident = Environment::get_ident_from_token(&param).to_owned();
+                    let ident = param.extract_ident().to_owned();
                     local_fun_scope.define(ident, arg);
                 }
 
