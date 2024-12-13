@@ -67,57 +67,46 @@ impl Interpreter {
                     .define(ident, init);
             },
             Stmt::Block(statements) => {
-                let new_env = Environment::with_enclosing(
-                    Rc::clone(&self.curr_env),
-                ).to_rc_cell();
-
-                self.execute_block(
-                    statements, 
-                    new_env,
-                )?;
+                self.execute_scoped(statements, self.new_env_with_enclosing())?;
             },
             Stmt::If(cond, branch_then, branch_else) => {
                 let cond = self.evaluate(cond)?.to_bool();
 
                 if cond {
-                    self.execute(*branch_then)?;
+                    self.execute_scoped(branch_then, self.new_env_with_enclosing())?;
                 } 
                 else if let Some(branch_else) = branch_else {
-                    self.execute(*branch_else)?;
+                    self.execute_scoped(branch_else, self.new_env_with_enclosing())?;
                 }
             },
             Stmt::While(cond, block) => {
                 while self.evaluate(cond.clone())?.to_bool() {
-                    self.execute(*block.clone())?;
+                    self.execute_scoped(block.clone(), self.new_env_with_enclosing())?;
                 }
             },
             Stmt::For(init, cond, side_effect, for_block) => {
+                // The body of the 'while' loop is the same as the 'for' 
+                // loop body, except that is also runs the "side effect" afterwards.
+                let while_body = for_block.into_iter()
+                    .chain(std::iter::once(Stmt::Expr(side_effect)))
+                    .collect();
+
                 // Transform the for loop into an equivalent while loop.
                 // A block is made to limit the scope of the initializer.
                 let stmt = Stmt::Block(vec![
                     *init,
                     Stmt::While(
                         cond,
-                        // The "side effect" expression statement needs to be in the 
-                        // 'while' block since it needs to run at the end of every 
-                        // iteration.
-                        Box::new(Stmt::Block(vec![*for_block, Stmt::Expr(side_effect)])),
+                        while_body,
                     ),
                 ]);
                 
                 self.execute(stmt)?;
             },
             Stmt::Fun(name, params, body) => {
-                // TODO: Rework the statement-related methods so that they use Vec<Stmt>,
-                // so that this is unnecessary.
-                let stmts = match *body {
-                    Stmt::Block(vec) => vec,
-                    _ => panic!("unexpected error while unpacking statement"),
-                };
-
                 self.curr_env
                     .borrow_mut()
-                    .define(name.clone(), Value::Fun(Some(name), params, stmts));
+                    .define(name.clone(), Value::Fun(Some(name), params, body));
             },
             Stmt::Return(_, ret_value) => {
                 let val = self.evaluate(ret_value)?;
@@ -129,7 +118,7 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_block(&mut self, statements: Vec<Stmt>, 
+    fn execute_scoped(&mut self, statements: Vec<Stmt>, 
         new_env: RcCell<Environment>) -> Result<(), RuntimeOutcome> 
     {
         // Set the current environment to be the new one.
@@ -450,19 +439,18 @@ impl Interpreter {
             Value::Fun(_, params, body) => {
                 self.check_arity(&args, params.len(), &ctx)?;
 
-                // Make a local scope for the function.
-                let mut local_fun_scope = Environment::with_enclosing(
-                    Rc::clone(&self.curr_env)
-                );
+                let local_fun_scope = self.new_env_with_enclosing();
 
                 // Bind the arguments to the parameters.
                 for (param, arg) in params.into_iter().zip(args) {
                     let ident = Environment::get_ident_from_token(&param).to_owned();
-                    local_fun_scope.define(ident, arg);
+
+                    local_fun_scope
+                        .borrow_mut()
+                        .define(ident, arg);
                 }
 
-                let fn_res = self.execute_block(body, local_fun_scope.to_rc_cell());
-
+                let fn_res = self.execute_scoped(body, local_fun_scope);
                 match fn_res {
                     // Return the function's return value if one is present.
                     Err(RuntimeOutcome::Return(val)) => Ok(val),
@@ -523,6 +511,14 @@ impl Interpreter {
                 Ok(Value::Num((elapsed as f64) / 1000.0))
             },
         }
+    }
+
+    /// Returns a new environment that has the current environment 
+    /// as its outer (enclosing) environment.
+    fn new_env_with_enclosing(&self) -> RcCell<Environment> {
+        Environment::with_enclosing(
+            Rc::clone(&self.curr_env),
+        ).to_rc_cell()
     }
 
     fn globals() -> Environment {

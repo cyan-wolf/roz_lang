@@ -6,9 +6,9 @@ pub enum Stmt {
     Print(Expr),
     DeclareVar(String, Expr),
     Block(Vec<Stmt>),
-    If(Expr, Box<Stmt>, Option<Box<Stmt>>),
-    While(Expr, Box<Stmt>),
-    For(Box<Stmt>, Expr, Expr, Box<Stmt>),
-    Fun(String, Vec<Token>, Box<Stmt>),
+    If(Expr, Vec<Stmt>, Option<Vec<Stmt>>),
+    While(Expr, Vec<Stmt>),
+    For(Box<Stmt>, Expr, Expr, Vec<Stmt>),
+    Fun(String, Vec<Token>, Vec<Stmt>),
     Return(Token, Expr),
 }

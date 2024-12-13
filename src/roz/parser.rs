@@ -52,7 +52,8 @@ impl Parser {
             self.statement_fn_decl()
         }
         else if self.match_any([TokenKind::Op(Op::LeftBrace)]) {
-            self.statement_block()
+            let statements = self.statement_block()?;
+            Ok(Stmt::Block(statements))
         }
         else if self.match_any([TokenKind::Keyword(Keyword::If)]) {
             self.statement_if()
@@ -131,7 +132,7 @@ impl Parser {
 
     /// Parses a block statement, which is just a series of statements
     /// wrapped in braces `{}`.
-    fn statement_block(&mut self) -> Result<Stmt, SyntaxError> {
+    fn statement_block(&mut self) -> Result<Vec<Stmt>, SyntaxError> {
         let mut statements = vec![];
 
         while !self.check_curr(&TokenKind::Op(Op::RightBrace)) 
@@ -145,7 +146,7 @@ impl Parser {
             |_| "expected '}' after block".to_owned(),
         )?;
         
-        Ok(Stmt::Block(statements))
+        Ok(statements)
     }
 
     /// Parses an if statement.
@@ -169,12 +170,12 @@ impl Parser {
             )?;
             let block_else = self.statement_block()?;
 
-            Some(Box::new(block_else))
+            Some(block_else)
         } else {
             None
         };
 
-        let stmt = Stmt::If(condition, Box::new(block_then), block_else);
+        let stmt = Stmt::If(condition, block_then, block_else);
         Ok(stmt)
     }
 
@@ -188,7 +189,7 @@ impl Parser {
         )?;
         let block = self.statement_block()?;
 
-        let stmt = Stmt::While(cond, Box::new(block));
+        let stmt = Stmt::While(cond, block);
         Ok(stmt)
     }
 
@@ -219,7 +220,7 @@ impl Parser {
             Box::new(init), 
             cond,
             side_effect,
-            Box::new(for_block),
+            for_block,
         );
 
         Ok(stmt)
@@ -247,7 +248,7 @@ impl Parser {
             )?;
             let block = self.statement_block()?;
 
-            let stmt = Stmt::Fun(fun_name, params, Box::new(block));
+            let stmt = Stmt::Fun(fun_name, params, block);
             Ok(stmt)
         } 
         else {
