@@ -293,8 +293,8 @@ impl Parser {
             let equals = self.prev().clone();
             let rvalue = self.assignment()?;
 
-            if let Expr::Var(lvalue) = expr {
-                Ok(Expr::Assign(lvalue, rvalue.to_box()))
+            if let Expr::Var(lvalue, _) = expr {
+                Ok(Expr::Assign(lvalue, rvalue.to_box(), None))
             } else {
                 let err = SyntaxError::new(
                     equals.line(),
@@ -527,7 +527,7 @@ impl Parser {
             },
             TokenKind::Literal(Literal::Ident(_)) => {
                 self.advance();
-                Expr::Var(self.prev().clone())
+                Expr::Var(self.prev().clone(), None)
             },
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();

@@ -11,8 +11,8 @@ pub enum Expr {
     Unary(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
-    Var(Token),
-    Assign(Token, Box<Expr>),
+    Var(Token, Option<usize>),
+    Assign(Token, Box<Expr>, Option<usize>),
     Call(Box<Expr>, Vec<Expr>, Token),
 }
 
@@ -31,8 +31,8 @@ impl Display for Expr {
                 write!(f, "({token} {expr1} {expr2})")
             },
             Expr::Grouping(expr) => write!(f, "(group {expr})"),
-            Expr::Var(ident) => write!(f, "var({ident})"),
-            Expr::Assign(lvalue, expr) => write!(f, "({lvalue} = {expr})"),
+            Expr::Var(ident, ..) => write!(f, "var({ident})"),
+            Expr::Assign(lvalue, expr, ..) => write!(f, "({lvalue} = {expr})"),
             Expr::Call(callee, args, _) => write!(f, "({callee} calls {args:?})"),
         }
     }

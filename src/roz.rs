@@ -9,6 +9,7 @@ mod interpreter;
 
 use std::io::{self, Write};
 use error::RozError;
+use resolver::Resolver;
 use scanner::Scanner;
 use parser::Parser;
 use interpreter::Interpreter;
@@ -26,6 +27,9 @@ pub fn run_file(file_name: String) -> Result<(), io::Error> {
             match err {
                 RozError::Syntax(..) => {
                     std::process::exit(65);
+                },
+                RozError::Resolution(..) => {
+                    std::process::exit(67);
                 },
                 RozError::Runtime(..) => {
                     std::process::exit(70);
@@ -66,7 +70,9 @@ fn run(interpreter: &mut Interpreter, content: Vec<char>) -> Result<(), RozError
     let scanner = Scanner::new(content);
     let tokens = scanner.scan_tokens()?;
 
-    let statements = Parser::new(tokens).parse()?;
+    let mut statements = Parser::new(tokens).parse()?;
+
+    Resolver::new().resolve_program(&mut statements)?;
 
     interpreter.interpret(statements)?;
 

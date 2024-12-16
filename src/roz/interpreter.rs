@@ -415,17 +415,19 @@ impl Interpreter {
                 }
             },
             Expr::Grouping(expr) => self.evaluate(*expr),
-            Expr::Var(ident) => {
-                let val = self.curr_env
+            Expr::Var(ident, jumps) => {
+                let actual_env = self.find_actual_env(jumps);
+                let val = actual_env
                     .borrow()
                     .retrieve(ident)?;
 
                 Ok(val)
             },
-            Expr::Assign(lvalue, expr) => {
+            Expr::Assign(lvalue, expr, jumps) => {
                 let rvalue = self.evaluate(*expr)?;
 
-                self.curr_env
+                let actual_env = self.find_actual_env(jumps);
+                actual_env
                     .borrow_mut()
                     .assign(lvalue, rvalue.clone())?;
 
@@ -440,6 +442,20 @@ impl Interpreter {
 
                 self.try_call_value(callee, args, ctx)
             },
+        }
+    }
+
+    fn find_actual_env(&self, jumps: Option<usize>) -> RcCell<Environment> {
+        let curr_env = Rc::clone(&self.curr_env);
+
+        match jumps {
+            // Perform the jumps to find the value of the variable.
+            Some(jumps) => {
+                Environment::ancestor(curr_env, jumps)
+                    .expect("unexpected error: outer scope was None")
+            },
+            // There are no jumps, so the variable is in the global scope.
+            None => curr_env
         }
     }
 

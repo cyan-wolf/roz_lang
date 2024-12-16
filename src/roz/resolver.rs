@@ -1,27 +1,36 @@
 use std::collections::HashMap;
 
-use super::{expr::Expr, interpreter::Interpreter, stmt::Stmt, token::Token};
+use super::{error::{ResolutionError, RozError}, expr::Expr, stmt::Stmt, token::Token};
 
 pub struct Resolver {
-    interpreter: Interpreter,
     scopes: Vec<HashMap<String, bool>>,
+    errs: Vec<ResolutionError>,
 }
 
 impl Resolver {
-    pub fn new(interpreter: Interpreter) -> Self {
+    pub fn new() -> Self {
         Self {
-            interpreter,
             scopes: vec![],
+            errs: vec![],
         }
     }
 
-    fn resolve(&mut self, statements: Vec<Stmt>) {
+    pub fn resolve_program(mut self, statements: &mut [Stmt]) -> Result<(), RozError> {
+        self.resolve_statements(statements);
+
+        if self.errs.len() > 0 {
+            return Err(RozError::Resolution(self.errs));
+        }
+        Ok(())
+    }
+
+    fn resolve_statements(&mut self, statements: &mut [Stmt]) {
         for stmt in statements {
             self.resolve_stmt(stmt);
         }
     }
 
-    fn resolve_stmt(&mut self, stmt: Stmt) {
+    fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
             Stmt::Expr(expr) => {
                 self.resolve_expr(expr);
@@ -32,7 +41,7 @@ impl Resolver {
             Stmt::DeclareVar(name, init) => {
                 self.declare(name.clone());
                 self.resolve_expr(init);
-                self.define(name);
+                self.define(name.clone());
             },
             Stmt::Block(statements) => {
                 self.resolve_block(statements);
@@ -49,16 +58,18 @@ impl Resolver {
                 self.resolve_expr(cond);
                 self.resolve_block(body);
             },
+            // Note: This branch might cause problems since it creates two 
+            // scopes when interpreted, instead of one like the while loop.
             Stmt::For(init, cond, side_effect, for_block) => {
-                self.resolve_stmt(*init);
+                self.resolve_stmt(&mut *init);
                 self.resolve_expr(cond);
                 self.resolve_expr(side_effect);
 
                 self.resolve_block(for_block);
             },
-            Stmt::Fun(name, params, body) => {
+            Stmt::Fun(name, ref params, body) => {
                 self.declare(name.clone());
-                self.define(name);
+                self.define(name.clone());
 
                 self.resolve_fun(params, body);
             },
@@ -68,41 +79,48 @@ impl Resolver {
         }
     }
 
-    fn resolve_expr(&mut self, expr: Expr) {
+    fn resolve_expr(&mut self, expr: &mut Expr) {
         match expr {
             Expr::Literal(_value) => {
                 // Do nothing, since a literal value
                 // does not contain subexpressions.
             },
             Expr::Unary(_, expr) => {
-                self.resolve_expr(*expr);
+                self.resolve_expr(&mut *expr);
             },
             Expr::Binary(left, _, right) => {
-                self.resolve_expr(*left);
-                self.resolve_expr(*right);
+                self.resolve_expr(&mut *left);
+                self.resolve_expr(&mut *right);
             },
             Expr::Grouping(expr) => {
-                self.resolve_expr(*expr);
+                self.resolve_expr(&mut *expr);
             },
-            Expr::Var(ident_token) => {
+            Expr::Var(ref ident_token, jumps) => {
                 if let Some(scope) = self.scopes.last() {
                     let ident = ident_token.extract_ident();
                     
                     if let Some(is_init) = scope.get(ident) {
                         if !is_init {
-                            unimplemented!("can't read local variable in its own initializer")
+                            let err = ResolutionError::new(
+                                format!("can't read local variable '{ident}' in its own initializer"),
+                                ident_token.clone(),
+                            );
+                            self.errs.push(err);
                         }
                     }
                 }
 
-                self.resolve_local(ident_token);
+                // Modify the AST to include the jump amount.
+                *jumps = self.resolve_local(ident_token);
             },
-            Expr::Assign(lvalue, rvalue) => {
-                self.resolve_expr(*rvalue);
-                self.resolve_local(lvalue);
+            Expr::Assign(ref lvalue, rvalue, jumps) => {
+                self.resolve_expr(&mut *rvalue);
+
+                // Modify the AST to include the jump amount.
+                *jumps = self.resolve_local(lvalue);
             },
             Expr::Call(callee, args, _) => {
-                self.resolve_expr(*callee);
+                self.resolve_expr(&mut *callee);
                 for arg in args {
                     self.resolve_expr(arg);
                 }
@@ -112,33 +130,29 @@ impl Resolver {
 
     /// Same as `Resolver::resolve_stmt`, but resolves the statements 
     /// in a new scope.
-    fn resolve_block(&mut self, statements: Vec<Stmt>) {
+    fn resolve_block(&mut self, statements: &mut [Stmt]) {
         self.begin_scope();
-        self.resolve(statements);
+        self.resolve_statements(statements);
         self.end_scope();
     }
 
     /// Look for the variable references by `ident` starting from the 
     /// outermost scope and checking all the way until the most general scope.
     /// Stops looking just before it reaches the global scope.
-    fn resolve_local(&mut self, ident: Token) {
+    fn resolve_local(&mut self, ident: &Token) -> Option<usize> {
         for i in (0..self.scopes.len()).rev() {
             if self.scopes[i].contains_key(ident.extract_ident()) {
                 let outermost_scope_idx = self.scopes.len() - 1;
                 
                 // The number of scopes between the current (outermost) scope
                 // and the scope where the variable was found (in this case, `i`).
-                let scope_jumps = outermost_scope_idx - i;
-                //self.interpreter.resolve(Expr::Var(ident), ...)
-                todo!();
-
-                // Stop searching since the variable was found.
-                return;
+                return Some(outermost_scope_idx - i);
             }
         }
+        return None;
     }
 
-    fn resolve_fun(&mut self, params: Vec<Token>, body: Vec<Stmt>) {
+    fn resolve_fun(&mut self, params: &[Token], body: &mut [Stmt]) {
         self.begin_scope();
 
         for param in params {
@@ -149,7 +163,7 @@ impl Resolver {
         
         // No need to use `Resolver::resolve_block`, since we already
         // began a scope in this function (`Resolver::resolve_fun`).
-        self.resolve(body);
+        self.resolve_statements(body);
         self.end_scope();
     }
 

@@ -60,10 +60,38 @@ impl Display for RuntimeError {
 
 impl std::error::Error for RuntimeError {}
 
+#[derive(Debug)]
+pub struct ResolutionError {
+    message: String,
+    token: Token,
+}
+
+impl ResolutionError {
+    pub fn new(message: String, token: Token) -> Self {
+        Self { 
+            message, 
+            token, 
+        }
+    }
+}
+
+impl Display for ResolutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, 
+            "[line {}] Resolution Error: {}", 
+            self.token.line(),
+            self.message,
+        )
+    }
+}
+
+impl std::error::Error for ResolutionError {}
+
 /// General error type.
 #[derive(Debug)]
 pub enum RozError {
     Syntax(Vec<SyntaxError>),
+    Resolution(Vec<ResolutionError>),
     Runtime(RuntimeError),
 }
 
@@ -71,6 +99,16 @@ impl Display for RozError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             &RozError::Syntax(ref errs) => {
+                for i in 0..errs.len() {
+                    write!(f, "{}", errs[i])?;
+
+                    if i != errs.len() - 1 {
+                        write!(f, "\n")?;
+                    }
+                }
+                Ok(())
+            },
+            &RozError::Resolution(ref errs) => {
                 for i in 0..errs.len() {
                     write!(f, "{}", errs[i])?;
 

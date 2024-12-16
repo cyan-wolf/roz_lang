@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use crate::roz::{
     error::RuntimeError, 
     expr::Value, 
-    token::{Literal, Token, TokenKind},
+    token::Token,
 };
 
 /// A reference counted mutable pointer.
@@ -74,5 +74,16 @@ impl Environment {
 
             Err(err)
         }
+    }
+
+    pub fn ancestor(env: RcCell<Self>, jumps: usize) -> Option<RcCell<Self>> {
+        let mut curr = env;
+
+        for _ in 0..jumps {
+            let enclosing = Rc::clone(curr.borrow().enclosing.as_ref()?);
+            curr = enclosing;
+        }
+
+        Some(curr)
     }
 }
