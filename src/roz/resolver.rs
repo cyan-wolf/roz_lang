@@ -15,8 +15,14 @@ impl Resolver {
         }
     }
 
+    /// Performs a resolution pass on a programs AST 
+    /// (represented as a slice of statements).
+    /// Note: The AST is mutated after resolution and may be in an invalid 
+    /// state if this method returns a `Result::Err`.
     pub fn resolve_program(mut self, statements: &mut [Stmt]) -> Result<(), RozError> {
-        self.resolve_statements(statements);
+        // Treat the entire program as if it were a block.
+        // This is to account for the global scope.
+        self.resolve_scoped(statements);
 
         if self.errs.len() > 0 {
             return Err(RozError::Resolution(self.errs));
@@ -24,12 +30,14 @@ impl Resolver {
         Ok(())
     }
 
+    /// Resolves all the given statements without starting a new scope.
     fn resolve_statements(&mut self, statements: &mut [Stmt]) {
         for stmt in statements {
             self.resolve_stmt(stmt);
         }
     }
 
+    /// Resolves a single statement and any sub-statements/expressions.
     fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         match stmt {
             Stmt::Expr(expr) => {
@@ -44,19 +52,19 @@ impl Resolver {
                 self.define(name.clone());
             },
             Stmt::Block(statements) => {
-                self.resolve_block(statements);
+                self.resolve_scoped(statements);
             },
             Stmt::If(cond, then_branch, else_branch) => {
                 self.resolve_expr(cond);
-                self.resolve_block(then_branch);
+                self.resolve_scoped(then_branch);
                 
                 if let Some(else_branch) = else_branch {
-                    self.resolve_block(else_branch);
+                    self.resolve_scoped(else_branch);
                 }
             },
             Stmt::While(cond, body) => {
                 self.resolve_expr(cond);
-                self.resolve_block(body);
+                self.resolve_scoped(body);
             },
             // Note: This branch might cause problems since it creates two 
             // scopes when interpreted, instead of one like the while loop.
@@ -65,7 +73,7 @@ impl Resolver {
                 self.resolve_expr(cond);
                 self.resolve_expr(side_effect);
 
-                self.resolve_block(for_block);
+                self.resolve_scoped(for_block);
             },
             Stmt::Fun(name, ref params, body) => {
                 self.declare(name.clone());
@@ -79,6 +87,7 @@ impl Resolver {
         }
     }
 
+    /// Resolves a single expression and any sub-expressions.
     fn resolve_expr(&mut self, expr: &mut Expr) {
         match expr {
             Expr::Literal(_value) => {
@@ -111,13 +120,13 @@ impl Resolver {
                 }
 
                 // Modify the AST to include the jump amount.
-                *jumps = self.resolve_local(ident_token);
+                *jumps = self.resolve_variable(ident_token);
             },
             Expr::Assign(ref lvalue, rvalue, jumps) => {
                 self.resolve_expr(&mut *rvalue);
 
                 // Modify the AST to include the jump amount.
-                *jumps = self.resolve_local(lvalue);
+                *jumps = self.resolve_variable(lvalue);
             },
             Expr::Call(callee, args, _) => {
                 self.resolve_expr(&mut *callee);
@@ -130,7 +139,7 @@ impl Resolver {
 
     /// Same as `Resolver::resolve_stmt`, but resolves the statements 
     /// in a new scope.
-    fn resolve_block(&mut self, statements: &mut [Stmt]) {
+    fn resolve_scoped(&mut self, statements: &mut [Stmt]) {
         self.begin_scope();
         self.resolve_statements(statements);
         self.end_scope();
@@ -138,8 +147,8 @@ impl Resolver {
 
     /// Look for the variable references by `ident` starting from the 
     /// outermost scope and checking all the way until the most general scope.
-    /// Stops looking just before it reaches the global scope.
-    fn resolve_local(&mut self, ident: &Token) -> Option<usize> {
+    /// Used for modifying the AST.
+    fn resolve_variable(&mut self, ident: &Token) -> Option<usize> {
         for i in (0..self.scopes.len()).rev() {
             if self.scopes[i].contains_key(ident.extract_ident()) {
                 let outermost_scope_idx = self.scopes.len() - 1;
@@ -149,9 +158,10 @@ impl Resolver {
                 return Some(outermost_scope_idx - i);
             }
         }
-        return None;
+        return None; // unreachable?
     }
 
+    /// Resolve a function and any sub-statements.
     fn resolve_fun(&mut self, params: &[Token], body: &mut [Stmt]) {
         self.begin_scope();
 
