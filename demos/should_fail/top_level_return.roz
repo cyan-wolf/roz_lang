@@ -1,0 +1,6 @@
+fun normalReturn() {
+    return "possible";
+}
+normalReturn();
+
+return "impossible";

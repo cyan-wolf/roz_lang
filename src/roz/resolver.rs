@@ -1,6 +1,12 @@
+mod context;
+
 use std::collections::HashMap;
 
+use context::{Context, Effect};
+
 use super::{error::{ResolutionError, RozError}, expr::Expr, stmt::Stmt, token::Token};
+
+
 
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
@@ -22,7 +28,7 @@ impl Resolver {
     pub fn resolve_program(mut self, statements: &mut [Stmt]) -> Result<(), RozError> {
         // Treat the entire program as if it were a block.
         // This is to account for the global scope.
-        self.resolve_scoped(statements);
+        self.resolve_scoped(statements, &mut Context::new());
 
         if self.errs.len() > 0 {
             return Err(RozError::Resolution(self.errs));
@@ -31,78 +37,89 @@ impl Resolver {
     }
 
     /// Resolves all the given statements without starting a new scope.
-    fn resolve_statements(&mut self, statements: &mut [Stmt]) {
+    fn resolve_statements(&mut self, statements: &mut [Stmt], ctx: &mut Context) {
         for stmt in statements {
-            self.resolve_stmt(stmt);
+            self.resolve_stmt(stmt, ctx);
         }
     }
 
     /// Resolves a single statement and any sub-statements/expressions.
-    fn resolve_stmt(&mut self, stmt: &mut Stmt) {
+    fn resolve_stmt(&mut self, stmt: &mut Stmt, ctx: &mut Context) {
         match stmt {
             Stmt::Expr(expr) => {
-                self.resolve_expr(expr);
+                self.resolve_expr(expr, ctx);
             },
             Stmt::Print(expr) => {
-                self.resolve_expr(expr);
+                self.resolve_expr(expr, ctx);
             },
             Stmt::DeclareVar(name, init) => {
                 self.declare(name.clone());
-                self.resolve_expr(init);
+                self.resolve_expr(init, ctx);
                 self.define(name.clone());
             },
             Stmt::Block(statements) => {
-                self.resolve_scoped(statements);
+                self.resolve_scoped(statements, ctx);
             },
             Stmt::If(cond, then_branch, else_branch) => {
-                self.resolve_expr(cond);
-                self.resolve_scoped(then_branch);
+                self.resolve_expr(cond, ctx);
+                self.resolve_scoped(then_branch, ctx);
                 
                 if let Some(else_branch) = else_branch {
-                    self.resolve_scoped(else_branch);
+                    self.resolve_scoped(else_branch, ctx);
                 }
             },
             Stmt::While(cond, body) => {
-                self.resolve_expr(cond);
-                self.resolve_scoped(body);
+                self.resolve_expr(cond, ctx);
+                self.resolve_scoped(body, ctx);
             },
             // Note: This branch might cause problems since it creates two 
             // scopes when interpreted, instead of one like the while loop.
             Stmt::For(init, cond, side_effect, for_block) => {
-                self.resolve_stmt(&mut *init);
-                self.resolve_expr(cond);
-                self.resolve_expr(side_effect);
+                self.resolve_stmt(&mut *init, ctx);
+                self.resolve_expr(cond, ctx);
+                self.resolve_expr(side_effect, ctx);
 
-                self.resolve_scoped(for_block);
+                self.resolve_scoped(for_block, ctx);
             },
             Stmt::Fun(name, ref params, body) => {
                 self.declare(name.clone());
                 self.define(name.clone());
 
-                self.resolve_fun(params, body);
+                ctx.add_effect(Effect::InFunction);
+                self.resolve_fun(params, body, ctx);
+                ctx.remove_effect(&Effect::InFunction);
             },
-            Stmt::Return(_, expr) => {
-                self.resolve_expr(expr);
+            Stmt::Return(token, expr) => {
+                // If a return statement is found and it is outside of a function,
+                // then generate an error.
+                if !ctx.has_effect(&Effect::InFunction) {
+                    let error = ResolutionError::new(
+                        "return statement outside of function".to_owned(),
+                        token.clone(),
+                    );
+                    self.errs.push(error);
+                }
+                self.resolve_expr(expr, ctx);
             },
         }
     }
 
     /// Resolves a single expression and any sub-expressions.
-    fn resolve_expr(&mut self, expr: &mut Expr) {
+    fn resolve_expr(&mut self, expr: &mut Expr, ctx: &mut Context) {
         match expr {
             Expr::Literal(_value) => {
                 // Do nothing, since a literal value
                 // does not contain subexpressions.
             },
             Expr::Unary(_, expr) => {
-                self.resolve_expr(&mut *expr);
+                self.resolve_expr(&mut *expr, ctx);
             },
             Expr::Binary(left, _, right) => {
-                self.resolve_expr(&mut *left);
-                self.resolve_expr(&mut *right);
+                self.resolve_expr(&mut *left, ctx);
+                self.resolve_expr(&mut *right, ctx);
             },
             Expr::Grouping(expr) => {
-                self.resolve_expr(&mut *expr);
+                self.resolve_expr(&mut *expr, ctx);
             },
             Expr::Var(ref ident_token, jumps) => {
                 if let Some(scope) = self.scopes.last() {
@@ -123,15 +140,15 @@ impl Resolver {
                 *jumps = self.resolve_variable(ident_token);
             },
             Expr::Assign(ref lvalue, rvalue, jumps) => {
-                self.resolve_expr(&mut *rvalue);
+                self.resolve_expr(&mut *rvalue, ctx);
 
                 // Modify the AST to include the jump amount.
                 *jumps = self.resolve_variable(lvalue);
             },
             Expr::Call(callee, args, _) => {
-                self.resolve_expr(&mut *callee);
+                self.resolve_expr(&mut *callee, ctx);
                 for arg in args {
-                    self.resolve_expr(arg);
+                    self.resolve_expr(arg, ctx);
                 }
             },
         }
@@ -139,9 +156,9 @@ impl Resolver {
 
     /// Same as `Resolver::resolve_stmt`, but resolves the statements 
     /// in a new scope.
-    fn resolve_scoped(&mut self, statements: &mut [Stmt]) {
+    fn resolve_scoped(&mut self, statements: &mut [Stmt], ctx: &mut Context) {
         self.begin_scope();
-        self.resolve_statements(statements);
+        self.resolve_statements(statements, ctx);
         self.end_scope();
     }
 
@@ -162,7 +179,7 @@ impl Resolver {
     }
 
     /// Resolve a function and any sub-statements.
-    fn resolve_fun(&mut self, params: &[Token], body: &mut [Stmt]) {
+    fn resolve_fun(&mut self, params: &[Token], body: &mut [Stmt], ctx: &mut Context) {
         self.begin_scope();
 
         for param in params {
@@ -173,7 +190,7 @@ impl Resolver {
         
         // No need to use `Resolver::resolve_block`, since we already
         // began a scope in this function (`Resolver::resolve_fun`).
-        self.resolve_statements(body);
+        self.resolve_statements(body, ctx);
         self.end_scope();
     }
 
