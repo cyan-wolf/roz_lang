@@ -9,10 +9,13 @@ use super::stmt::Stmt;
 use super::token::{Keyword, Op, Token, TokenKind};
 use super::error::{RozError, RuntimeError};
 
-// Models runtime errors and function return values.
+// Models runtime errors and other special control flow
+// constructs (such as return, break, continue, etc.).
 pub enum RuntimeOutcome {
     Error(RuntimeError),
     Return(Value),
+    Break,
+    Continue,
 }
 
 impl From<RuntimeError> for RuntimeOutcome {
@@ -41,6 +44,12 @@ impl Interpreter {
                 },
                 Err(RuntimeOutcome::Return(..)) => {
                     panic!("unexpected error: top-level return");
+                },
+                Err(RuntimeOutcome::Break) => {
+                    panic!("unexpected error: top-level break");
+                },
+                Err(RuntimeOutcome::Continue) => {
+                    panic!("unexpected error: top-level continue");
                 },
                 Ok(_) => {},
             }
@@ -80,7 +89,23 @@ impl Interpreter {
             },
             Stmt::While(cond, block) => {
                 while self.evaluate(cond.clone())?.to_bool() {
-                    self.execute_scoped(block.clone(), self.new_env_with_enclosing())?;
+                    let outcome = self.execute_scoped(
+                        block.clone(), 
+                        self.new_env_with_enclosing(),
+                    );
+
+                    // Handle any break or continue statements that were in the body.
+                    match outcome {
+                        Err(RuntimeOutcome::Break) => {
+                            break;
+                        },
+                        Err(RuntimeOutcome::Continue) => {
+                            continue;
+                        },
+                        // Propogate othwer cases (such as a return statement, 
+                        // or a runtime error).
+                        otherwise => otherwise?,
+                    }
                 }
             },
             Stmt::For(init, cond, side_effect, for_block) => {
@@ -122,6 +147,12 @@ impl Interpreter {
 
                 return Err(RuntimeOutcome::Return(val));
             },
+            Stmt::Break(_) => {
+                return Err(RuntimeOutcome::Break);
+            }
+            Stmt::Continue(_) => {
+                return Err(RuntimeOutcome::Continue);
+            }
         }
 
         Ok(())

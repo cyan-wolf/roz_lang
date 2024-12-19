@@ -11,4 +11,6 @@ pub enum Stmt {
     For(Box<Stmt>, Expr, Expr, Vec<Stmt>),
     Fun(String, Vec<Token>, Vec<Stmt>),
     Return(Token, Expr),
+    Break(Token),
+    Continue(Token),
 }

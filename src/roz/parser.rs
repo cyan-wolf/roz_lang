@@ -67,6 +67,12 @@ impl Parser {
         else if self.match_any([TokenKind::Keyword(Keyword::Return)]) {
             self.statement_return()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::Break)]) {
+            self.statement_break()
+        }
+        else if self.match_any([TokenKind::Keyword(Keyword::Continue)]) {
+            self.statement_continue()
+        }
         else {
             self.statement_expr()
         }
@@ -278,6 +284,28 @@ impl Parser {
         )?;
 
         Ok(Stmt::Return(keyword, ret_value))
+    }
+
+    fn statement_break(&mut self) -> Result<Stmt, SyntaxError> {
+        let keyword = self.prev().clone();
+
+        self.try_match(
+            &TokenKind::Op(Op::Semicolon),
+            |_| "expected ';' after 'break'".to_owned(), 
+        )?;
+
+        Ok(Stmt::Break(keyword))
+    }
+
+    fn statement_continue(&mut self) -> Result<Stmt, SyntaxError> {
+        let keyword = self.prev().clone();
+
+        self.try_match(
+            &TokenKind::Op(Op::Semicolon),
+            |_| "expected ';' after 'continue'".to_owned(), 
+        )?;
+
+        Ok(Stmt::Continue(keyword))
     }
 
     /// Parses an expression.

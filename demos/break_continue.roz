@@ -1,25 +1,29 @@
 
 {
     var count = 0;
+    var acc = 0;
 
     while count < 10 {
-        if count == 5 {
-            break;
-        }
         count = count + 1;
+        
+        if count mod 2 == 0 {
+            continue;
+        }
+        acc = acc + count;
     }
 
-    println(count); // 5
+    println(count); // 10
+    println(acc); // 25
 }
 
 {
     var acc = 0;
     for var i = 0; i < 10; i = i + 1 {
-        if i mod 2 == 0 {
-            continue;
+        if i == 5 {
+            break;
         }
         acc = acc + i;
     }
 
-    println(acc); // 25
+    println(acc); // 10
 }

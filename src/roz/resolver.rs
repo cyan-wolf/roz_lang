@@ -6,8 +6,6 @@ use context::{Context, Effect};
 
 use super::{error::{ResolutionError, RozError}, expr::Expr, stmt::Stmt, token::Token};
 
-
-
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
     errs: Vec<ResolutionError>,
@@ -69,17 +67,25 @@ impl Resolver {
                 }
             },
             Stmt::While(cond, body) => {
+                ctx.add_effect(Effect::InLoop);
                 self.resolve_expr(cond, ctx);
                 self.resolve_scoped(body, ctx);
+                ctx.remove_effect(&Effect::InLoop);
             },
-            // Note: This branch might cause problems since it creates two 
-            // scopes when interpreted, instead of one like the while loop.
             Stmt::For(init, cond, side_effect, for_block) => {
+                // A for loop creates an extra scope compared to a while loop.
+                self.begin_scope();
+
+                ctx.add_effect(Effect::InLoop);
                 self.resolve_stmt(&mut *init, ctx);
                 self.resolve_expr(cond, ctx);
                 self.resolve_expr(side_effect, ctx);
 
                 self.resolve_scoped(for_block, ctx);
+                ctx.remove_effect(&Effect::InLoop);
+
+                // A for loop creates an extra scope compared to a while loop.
+                self.end_scope();
             },
             Stmt::Fun(name, ref params, body) => {
                 self.declare(name.clone());
@@ -100,6 +106,24 @@ impl Resolver {
                     self.errs.push(error);
                 }
                 self.resolve_expr(expr, ctx);
+            },
+            Stmt::Break(token) => {
+                if !ctx.has_effect(&Effect::InLoop) {
+                    let error = ResolutionError::new(
+                        "break statement outside of loop".to_owned(),
+                        token.clone(),
+                    );
+                    self.errs.push(error);
+                }
+            },
+            Stmt::Continue(token) => {
+                if !ctx.has_effect(&Effect::InLoop) {
+                    let error = ResolutionError::new(
+                        "continue statement outside of loop".to_owned(),
+                        token.clone(),
+                    );
+                    self.errs.push(error);
+                }
             },
         }
     }
