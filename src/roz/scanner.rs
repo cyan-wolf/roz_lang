@@ -264,6 +264,10 @@ impl Scanner {
             "var" => Keyword::Var,
             "while" => Keyword::While,
             "typeof" => Keyword::TypeOf,
+            "mod" => Keyword::Mod,
+            "div" => Keyword::Div,
+            "break" => Keyword::Break,
+            "continue" => Keyword::Continue,
             _ => return None,
         };
 

@@ -366,13 +366,26 @@ impl Parser {
 
     /// Parses a term, such as `a + b` or `a - b`.
     fn term(&mut self) -> Result<Expr, SyntaxError> {
-        let mut expr = self.factor()?;
+        let mut expr = self.mod_div_expr()?;
 
         while self.match_any([TokenKind::Op(Op::Plus), TokenKind::Op(Op::Minus)]) {
+            let op = self.prev().clone();
+            let right = self.mod_div_expr()?;
+            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+        }
+        Ok(expr)
+    }
+
+    /// Parses a 'mod' or a 'div' expression, such as `a mod b` or `a div b`.
+    fn mod_div_expr(&mut self) -> Result<Expr, SyntaxError> {
+        let mut expr = self.factor()?;
+
+        while self.match_any([TokenKind::Keyword(Keyword::Mod), TokenKind::Keyword(Keyword::Div)]) {
             let op = self.prev().clone();
             let right = self.factor()?;
             expr = Expr::Binary(expr.to_box(), op, right.to_box());
         }
+
         Ok(expr)
     }
 

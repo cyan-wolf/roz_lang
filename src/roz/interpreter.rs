@@ -279,6 +279,62 @@ impl Interpreter {
                             },
                         }
                     },
+                    &TokenKind::Keyword(Keyword::Mod) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        match (op1, op2) {
+                            (Value::Num(num1), Value::Num(num2)) => {
+                                if num2 == 0.0 {
+                                    let err = RuntimeError::new(
+                                        "modulo zero".to_owned(),
+                                        token,
+                                    );
+                                    return Err(err)?;
+                                }
+
+                                Ok(Value::Num(num1.rem_euclid(num2)))
+                            },
+                            (op1, op2) => {
+                                let err = RuntimeError::new(
+                                    format!(
+                                        "cannot apply {} to operands of types {} and {}",
+                                        token, op1.get_type(), op2.get_type(),
+                                    ),
+                                    token, 
+                                );
+                                Err(err)?
+                            },
+                        }
+                    },
+                    &TokenKind::Keyword(Keyword::Div) => {
+                        let op1 = self.evaluate(*expr1)?;
+                        let op2 = self.evaluate(*expr2)?;
+
+                        match (op1, op2) {
+                            (Value::Num(num1), Value::Num(num2)) => {
+                                if num2 == 0.0 {
+                                    let err = RuntimeError::new(
+                                        "division by zero".to_owned(),
+                                        token,
+                                    );
+                                    return Err(err)?;
+                                }
+
+                                Ok(Value::Num(num1.div_euclid(num2)))
+                            },
+                            (op1, op2) => {
+                                let err = RuntimeError::new(
+                                    format!(
+                                        "cannot apply {} to operands of types {} and {}",
+                                        token, op1.get_type(), op2.get_type(),
+                                    ),
+                                    token, 
+                                );
+                                Err(err)?
+                            },
+                        }
+                    },
                     &TokenKind::Op(Op::Less) => {
                         let op1 = self.evaluate(*expr1)?;
                         let op2 = self.evaluate(*expr2)?;

@@ -87,6 +87,10 @@ pub enum Keyword {
     Var, 
     While,
     TypeOf,
+    Mod,
+    Div,
+    Break,
+    Continue,
 }
 
 impl Display for Op {
@@ -147,6 +151,10 @@ impl Display for Keyword {
             Keyword::Var => "var",
             Keyword::While => "while",
             Keyword::TypeOf => "typeof",
+            Keyword::Mod => "mod",
+            Keyword::Div => "div",
+            Keyword::Break => "break",
+            Keyword::Continue => "continue",
         };
 
         write!(f, "{str}")
