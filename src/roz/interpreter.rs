@@ -5,7 +5,7 @@ pub use environment::{Environment, RcCell};
 use std::rc::Rc;
 use super::expr::value::NativeFun;
 use super::expr::{Expr, Value};
-use super::stmt::Stmt;
+use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Op, Token, TokenKind};
 use super::error::{RozError, RuntimeError};
 
@@ -127,7 +127,7 @@ impl Interpreter {
                 
                 self.execute(stmt)?;
             },
-            Stmt::Fun(name, params, body) => {
+            Stmt::Fun(FunDecl {name, params, body}) => {
                 // Make the function object. Stores a reference to the 
                 // current environment (at definition time), which allows 
                 // the implementation of closures.
@@ -141,6 +141,9 @@ impl Interpreter {
                 self.curr_env
                     .borrow_mut()
                     .define(name, fun);
+            },
+            Stmt::Class(name, methods) => {
+                unimplemented!()
             },
             Stmt::Return(_, ret_value) => {
                 let val = self.evaluate(ret_value)?;

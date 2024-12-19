@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use context::{Context, Effect};
 
-use super::{error::{ResolutionError, RozError}, expr::Expr, stmt::Stmt, token::Token};
+use super::{error::{ResolutionError, RozError}, expr::Expr, stmt::{FunDecl, Stmt}, token::Token};
 
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
@@ -87,13 +87,31 @@ impl Resolver {
                 // A for loop creates an extra scope compared to a while loop.
                 self.end_scope();
             },
-            Stmt::Fun(name, ref params, body) => {
+            Stmt::Fun(FunDecl {name, ref params, body}) => {
                 self.declare(name.clone());
                 self.define(name.clone());
 
                 ctx.add_effect(Effect::InFunction);
                 self.resolve_fun(params, body, ctx);
                 ctx.remove_effect(&Effect::InFunction);
+            },
+            Stmt::Class(ref name, methods) => {
+                let ident = name.extract_ident().to_owned();
+                self.declare(ident.clone());
+                self.define(ident);
+
+                for decl in methods {
+                    let FunDecl {name, ref params, body} = decl;
+                    
+                    // TODO: Find a way to avoid having to make this code be 
+                    // copy-pasted from the Stmt::Fun(..) branch.
+                    self.declare(name.clone());
+                    self.define(name.clone());
+
+                    ctx.add_effect(Effect::InFunction);
+                    self.resolve_fun(params, body, ctx);
+                    ctx.remove_effect(&Effect::InFunction);
+                }
             },
             Stmt::Return(token, expr) => {
                 // If a return statement is found and it is outside of a function,

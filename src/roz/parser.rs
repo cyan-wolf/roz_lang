@@ -1,6 +1,6 @@
 use super::error::{RozError, SyntaxError};
 use super::expr::{Expr, Value};
-use super::stmt::Stmt;
+use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
 
 pub struct Parser {
@@ -46,10 +46,14 @@ impl Parser {
             self.statement_print()
         }
         else if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
-            self.statement_declaration()
+            self.statement_var_decl()
         }
         else if self.match_any([TokenKind::Keyword(Keyword::Fun)]) {
-            self.statement_fn_decl()
+            let stmt = Stmt::Fun(self.fn_decl()?);
+            Ok(stmt)
+        }
+        else if self.match_any([TokenKind::Keyword(Keyword::Class)]) {
+            self.statement_class_decl()
         }
         else if self.match_any([TokenKind::Op(Op::LeftBrace)]) {
             let statements = self.statement_block()?;
@@ -103,7 +107,7 @@ impl Parser {
     }
 
     /// Parses a variable declaration, i.e. `var <name> = <expr>;`.
-    fn statement_declaration(&mut self) -> Result<Stmt, SyntaxError> {
+    fn statement_var_decl(&mut self) -> Result<Stmt, SyntaxError> {
         match self.peek().kind() {
             TokenKind::Literal(Literal::Ident(ident)) => {
                 let ident = ident.clone();
@@ -201,7 +205,7 @@ impl Parser {
 
     fn statement_for(&mut self) -> Result<Stmt, SyntaxError> {
         let init = if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
-            self.statement_declaration()?
+            self.statement_var_decl()?
         } else {
             self.statement_expr()?
         };
@@ -232,9 +236,9 @@ impl Parser {
         Ok(stmt)
     }
 
-    fn statement_fn_decl(&mut self) -> Result<Stmt, SyntaxError> {
+    fn fn_decl(&mut self) -> Result<FunDecl, SyntaxError> {
         if let TokenKind::Literal(Literal::Ident(ident)) = self.peek().kind() {
-            let fun_name = ident.clone();
+            let name = ident.clone();
             self.advance();
 
             self.try_match(
@@ -252,10 +256,10 @@ impl Parser {
                 &TokenKind::Op(Op::LeftBrace),
                 |_| "expected '{' after parameter list".to_owned(),
             )?;
-            let block = self.statement_block()?;
+            let body = self.statement_block()?;
 
-            let stmt = Stmt::Fun(fun_name, params, block);
-            Ok(stmt)
+            let decl = FunDecl {name, params, body};
+            Ok(decl)
         } 
         else {
             let token = self.peek().clone();
@@ -267,6 +271,40 @@ impl Parser {
 
             Err(err)
         }
+    }
+
+    fn statement_class_decl(&mut self) -> Result<Stmt, SyntaxError> {
+        let name = if let TokenKind::Literal(Literal::Ident(..)) = self.peek().kind() {
+            self.advance();
+            self.prev().clone()
+        } else {
+            let token = self.peek().clone();
+            let err = SyntaxError::new(
+                token.line(),
+                "expected class name".to_owned(),
+                Some(token),
+            );
+            return Err(err);
+        };
+
+        self.try_match(
+            &TokenKind::Op(Op::LeftBrace),
+            |_| "expected '{' after class name".to_owned(),
+        )?;
+
+        let mut methods = vec![];
+
+        while !self.check_curr(&TokenKind::Op(Op::RightBrace)) && !self.is_at_end() {
+            methods.push(self.fn_decl()?);
+        }
+
+        self.try_match(
+            &TokenKind::Op(Op::LeftBrace),
+            |_| "expected '}' after class body".to_owned(),
+        )?;
+        
+        let stmt = Stmt::Class(name, methods);
+        Ok(stmt)
     }
 
     fn statement_return(&mut self) -> Result<Stmt, SyntaxError> {
