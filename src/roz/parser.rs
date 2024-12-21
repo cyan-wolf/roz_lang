@@ -124,7 +124,7 @@ impl Parser {
                     |_| "expected ';' after declaration".to_owned(),
                 )?;
 
-                Ok(Stmt::DeclareVar(ident, init))
+                Ok(Stmt::DeclareVar { ident, init })
             },
             _ => {
                 let token = self.peek().clone();
@@ -161,16 +161,16 @@ impl Parser {
 
     /// Parses an if statement.
     fn statement_if(&mut self) -> Result<Stmt, SyntaxError> {
-        let condition = self.expression()?;
+        let cond = self.expression()?;
 
         // Match a '{' before parsing the 'then' block.
         self.try_match(
             &TokenKind::Op(Op::LeftBrace),
             |_| "expected '{' after if condition".to_owned(),
         )?;
-        let block_then = self.statement_block()?;
+        let then_branch = self.statement_block()?;
 
-        let block_else = if self.match_any([
+        let else_branch = if self.match_any([
             TokenKind::Keyword(Keyword::Else),
         ]) {
             // Match a '{' before parsing the 'else' block.
@@ -185,7 +185,7 @@ impl Parser {
             None
         };
 
-        let stmt = Stmt::If(condition, block_then, block_else);
+        let stmt = Stmt::If { cond, then_branch, else_branch };
         Ok(stmt)
     }
 
@@ -197,9 +197,9 @@ impl Parser {
             &TokenKind::Op(Op::LeftBrace),
             |_| "expected '{' after 'while' condition".to_owned(),
         )?;
-        let block = self.statement_block()?;
+        let body = self.statement_block()?;
 
-        let stmt = Stmt::While(cond, block);
+        let stmt = Stmt::While { cond, body };
         Ok(stmt)
     }
 
@@ -224,14 +224,14 @@ impl Parser {
             &TokenKind::Op(Op::LeftBrace),
             |_| "expected '{' after 'for' updater".to_owned(),
         )?;
-        let for_block = self.statement_block()?;
+        let body = self.statement_block()?;
 
-        let stmt = Stmt::For(
-            Box::new(init), 
+        let stmt = Stmt::For {
+            init: Box::new(init), 
             cond,
             side_effect,
-            for_block,
-        );
+            body,
+        };
 
         Ok(stmt)
     }
@@ -303,7 +303,7 @@ impl Parser {
             |_| "expected '}' after class body".to_owned(),
         )?;
         
-        let stmt = Stmt::Class(name, methods);
+        let stmt = Stmt::Class { name, methods };
         Ok(stmt)
     }
 
@@ -321,7 +321,7 @@ impl Parser {
             |_| "expected ';' after return value".to_owned(), 
         )?;
 
-        Ok(Stmt::Return(keyword, ret_value))
+        Ok(Stmt::Return { ctx: keyword, ret_value })
     }
 
     fn statement_break(&mut self) -> Result<Stmt, SyntaxError> {

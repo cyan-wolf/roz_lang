@@ -67,7 +67,7 @@ impl Interpreter {
                 let val = self.evaluate(expr)?;
                 println!("{val}");
             },
-            Stmt::DeclareVar(ident, init) => {
+            Stmt::DeclareVar { ident, init } => {
                 let init = self.evaluate(init)?;
 
                 self.curr_env
@@ -77,20 +77,20 @@ impl Interpreter {
             Stmt::Block(statements) => {
                 self.execute_scoped(statements, self.new_env_with_enclosing())?;
             },
-            Stmt::If(cond, branch_then, branch_else) => {
+            Stmt::If { cond, then_branch, else_branch } => {
                 let cond = self.evaluate(cond)?.to_bool();
 
                 if cond {
-                    self.execute_scoped(branch_then, self.new_env_with_enclosing())?;
+                    self.execute_scoped(then_branch, self.new_env_with_enclosing())?;
                 } 
-                else if let Some(branch_else) = branch_else {
+                else if let Some(branch_else) = else_branch {
                     self.execute_scoped(branch_else, self.new_env_with_enclosing())?;
                 }
             },
-            Stmt::While(cond, block) => {
+            Stmt::While { cond, body } => {
                 while self.evaluate(cond.clone())?.to_bool() {
                     let outcome = self.execute_scoped(
-                        block.clone(), 
+                        body.clone(), 
                         self.new_env_with_enclosing(),
                     );
 
@@ -108,10 +108,10 @@ impl Interpreter {
                     }
                 }
             },
-            Stmt::For(init, cond, side_effect, for_block) => {
+            Stmt::For { init, cond, side_effect, body: body_for } => {
                 // The body of the 'while' loop is the same as the 'for' 
                 // loop body, except that is also runs the "side effect" afterwards.
-                let while_body = for_block.into_iter()
+                let body_while = body_for.into_iter()
                     .chain(std::iter::once(Stmt::Expr(side_effect)))
                     .collect();
 
@@ -119,10 +119,10 @@ impl Interpreter {
                 // A block is made to limit the scope of the initializer.
                 let stmt = Stmt::Block(vec![
                     *init,
-                    Stmt::While(
+                    Stmt::While {
                         cond,
-                        while_body,
-                    ),
+                        body: body_while,
+                    },
                 ]);
                 
                 self.execute(stmt)?;
@@ -142,10 +142,10 @@ impl Interpreter {
                     .borrow_mut()
                     .define(name, fun);
             },
-            Stmt::Class(name, methods) => {
+            Stmt::Class { name, methods } => {
                 unimplemented!()
             },
-            Stmt::Return(_, ret_value) => {
+            Stmt::Return { ctx: _, ret_value } => {
                 let val = self.evaluate(ret_value)?;
 
                 return Err(RuntimeOutcome::Return(val));

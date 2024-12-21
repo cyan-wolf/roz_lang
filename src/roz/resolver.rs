@@ -50,15 +50,15 @@ impl Resolver {
             Stmt::Print(expr) => {
                 self.resolve_expr(expr, ctx);
             },
-            Stmt::DeclareVar(name, init) => {
-                self.declare(name.clone());
+            Stmt::DeclareVar { ident, init } => {
+                self.declare(ident.clone());
                 self.resolve_expr(init, ctx);
-                self.define(name.clone());
+                self.define(ident.clone());
             },
             Stmt::Block(statements) => {
                 self.resolve_scoped(statements, ctx);
             },
-            Stmt::If(cond, then_branch, else_branch) => {
+            Stmt::If { cond, then_branch, else_branch} => {
                 self.resolve_expr(cond, ctx);
                 self.resolve_scoped(then_branch, ctx);
                 
@@ -66,13 +66,13 @@ impl Resolver {
                     self.resolve_scoped(else_branch, ctx);
                 }
             },
-            Stmt::While(cond, body) => {
+            Stmt::While { cond, body } => {
                 ctx.add_effect(Effect::InLoop);
                 self.resolve_expr(cond, ctx);
                 self.resolve_scoped(body, ctx);
                 ctx.remove_effect(&Effect::InLoop);
             },
-            Stmt::For(init, cond, side_effect, for_block) => {
+            Stmt::For { init, cond, side_effect, body } => {
                 // A for loop creates an extra scope compared to a while loop.
                 self.begin_scope();
 
@@ -81,13 +81,13 @@ impl Resolver {
                 self.resolve_expr(cond, ctx);
                 self.resolve_expr(side_effect, ctx);
 
-                self.resolve_scoped(for_block, ctx);
+                self.resolve_scoped(body, ctx);
                 ctx.remove_effect(&Effect::InLoop);
 
                 // A for loop creates an extra scope compared to a while loop.
                 self.end_scope();
             },
-            Stmt::Fun(FunDecl {name, ref params, body}) => {
+            Stmt::Fun(FunDecl { ref name, ref params, body} ) => {
                 self.declare(name.clone());
                 self.define(name.clone());
 
@@ -95,7 +95,7 @@ impl Resolver {
                 self.resolve_fun(params, body, ctx);
                 ctx.remove_effect(&Effect::InFunction);
             },
-            Stmt::Class(ref name, methods) => {
+            Stmt::Class { ref name, methods } => {
                 let ident = name.extract_ident().to_owned();
                 self.declare(ident.clone());
                 self.define(ident);
@@ -113,17 +113,17 @@ impl Resolver {
                     ctx.remove_effect(&Effect::InFunction);
                 }
             },
-            Stmt::Return(token, expr) => {
+            Stmt::Return { ctx: ret_token, ret_value } => {
                 // If a return statement is found and it is outside of a function,
                 // then generate an error.
                 if !ctx.has_effect(&Effect::InFunction) {
                     let error = ResolutionError::new(
                         "return statement outside of function".to_owned(),
-                        token.clone(),
+                        ret_token.clone(),
                     );
                     self.errs.push(error);
                 }
-                self.resolve_expr(expr, ctx);
+                self.resolve_expr(ret_value, ctx);
             },
             Stmt::Break(token) => {
                 if !ctx.has_effect(&Effect::InLoop) {
