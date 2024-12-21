@@ -359,8 +359,9 @@ impl Parser {
             let equals = self.prev().clone();
             let rvalue = self.assignment()?;
 
-            if let Expr::Var(lvalue, _) = expr {
-                Ok(Expr::Assign(lvalue, rvalue.to_box(), None))
+            if let Expr::Var {lvalue, ..} = expr {
+                // The jumps are set later in the resolver.
+                Ok(Expr::Assign {lvalue, rvalue: rvalue.to_box(), jumps: None })
             } else {
                 let err = SyntaxError::new(
                     equals.line(),
@@ -382,7 +383,7 @@ impl Parser {
             let op = self.prev().clone();
             let right = self.logic_and()?;
 
-            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+            expr = Expr::Binary { left: expr.to_box(), op, right: right.to_box() };
         }
         
         Ok(expr)
@@ -395,7 +396,7 @@ impl Parser {
             let op = self.prev().clone();
             let right = self.equality()?;
 
-            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+            expr = Expr::Binary { left: expr.to_box(), op, right: right.to_box() };
         }
         
         Ok(expr)
@@ -408,7 +409,7 @@ impl Parser {
         while self.match_any([TokenKind::Op(Op::BangEq), TokenKind::Op(Op::Equality)]) {
             let op = self.prev().clone();
             let right = self.comparision()?;
-            expr = Expr::Binary(expr.to_box(), op, right.to_box())
+            expr = Expr::Binary { left: expr.to_box(), op, right: right.to_box() };
         }
         Ok(expr)
     }
@@ -425,7 +426,7 @@ impl Parser {
         ]) {
             let op = self.prev().clone();
             let right = self.term()?;
-            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+            expr = Expr::Binary { left: expr.to_box(), op, right: right.to_box() };
         }
         Ok(expr)
     }
@@ -437,7 +438,7 @@ impl Parser {
         while self.match_any([TokenKind::Op(Op::Plus), TokenKind::Op(Op::Minus)]) {
             let op = self.prev().clone();
             let right = self.mod_div_expr()?;
-            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+            expr = Expr::Binary { left: expr.to_box(), op, right: right.to_box() };
         }
         Ok(expr)
     }
@@ -449,7 +450,7 @@ impl Parser {
         while self.match_any([TokenKind::Keyword(Keyword::Mod), TokenKind::Keyword(Keyword::Div)]) {
             let op = self.prev().clone();
             let right = self.factor()?;
-            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+            expr = Expr::Binary { left: expr.to_box(), op, right: right.to_box() };
         }
 
         Ok(expr)
@@ -462,7 +463,7 @@ impl Parser {
         while self.match_any([TokenKind::Op(Op::Star), TokenKind::Op(Op::Slash)]) {
             let op = self.prev().clone();
             let right = self.unary()?;
-            expr = Expr::Binary(expr.to_box(), op, right.to_box());
+            expr = Expr::Binary { left: expr.to_box(), op, right: right.to_box() };
         }
         Ok(expr)
     }
@@ -477,7 +478,7 @@ impl Parser {
             let op = self.prev().clone();
             let right = self.unary()?;
             
-            let expr = Expr::Unary(op, right.to_box());
+            let expr = Expr::Unary { op, expr: right.to_box() };
             Ok(expr)
         } else {
             self.call()
@@ -497,7 +498,7 @@ impl Parser {
                     |_| "expected ')'".to_owned(),
                 )?;
 
-                expr = Expr::Call(expr.to_box(), args, paren);
+                expr = Expr::Call {callee: expr.to_box(), args, ctx: paren };
             } 
             else {
                 break Ok(expr);
@@ -606,7 +607,8 @@ impl Parser {
             },
             TokenKind::Literal(Literal::Ident(_)) => {
                 self.advance();
-                Expr::Var(self.prev().clone(), None)
+                // Set the jumps to None, since those are set later in the resolver.
+                Expr::Var { lvalue: self.prev().clone(), jumps: None }
             },
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();

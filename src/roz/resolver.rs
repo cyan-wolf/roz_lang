@@ -153,25 +153,25 @@ impl Resolver {
                 // Do nothing, since a literal value
                 // does not contain subexpressions.
             },
-            Expr::Unary(_, expr) => {
+            Expr::Unary { op: _, expr } => {
                 self.resolve_expr(&mut *expr, ctx);
             },
-            Expr::Binary(left, _, right) => {
+            Expr::Binary { left, op: _, right } => {
                 self.resolve_expr(&mut *left, ctx);
                 self.resolve_expr(&mut *right, ctx);
             },
             Expr::Grouping(expr) => {
                 self.resolve_expr(&mut *expr, ctx);
             },
-            Expr::Var(ref ident_token, jumps) => {
+            Expr::Var { ref lvalue, jumps } => {
                 if let Some(scope) = self.scopes.last() {
-                    let ident = ident_token.extract_ident();
+                    let ident = lvalue.extract_ident();
                     
                     if let Some(is_init) = scope.get(ident) {
                         if !is_init {
                             let err = ResolutionError::new(
                                 format!("can't read local variable '{ident}' in its own initializer"),
-                                ident_token.clone(),
+                                lvalue.clone(),
                             );
                             self.errs.push(err);
                         }
@@ -179,15 +179,15 @@ impl Resolver {
                 }
 
                 // Modify the AST to include the jump amount.
-                *jumps = self.resolve_variable(ident_token);
+                *jumps = self.resolve_variable(lvalue);
             },
-            Expr::Assign(ref lvalue, rvalue, jumps) => {
+            Expr::Assign {ref lvalue, rvalue, jumps } => {
                 self.resolve_expr(&mut *rvalue, ctx);
 
                 // Modify the AST to include the jump amount.
                 *jumps = self.resolve_variable(lvalue);
             },
-            Expr::Call(callee, args, _) => {
+            Expr::Call { callee, args, ctx: _ } => {
                 self.resolve_expr(&mut *callee, ctx);
                 for arg in args {
                     self.resolve_expr(arg, ctx);

@@ -8,12 +8,12 @@ use super::token::Token;
 #[derive(Debug, Clone)]
 pub enum Expr {
     Literal(Value),
-    Unary(Token, Box<Expr>),
-    Binary(Box<Expr>, Token, Box<Expr>),
+    Unary { op: Token, expr: Box<Expr> },
+    Binary { left: Box<Expr>, op: Token, right: Box<Expr> },
     Grouping(Box<Expr>),
-    Var(Token, Option<usize>),
-    Assign(Token, Box<Expr>, Option<usize>),
-    Call(Box<Expr>, Vec<Expr>, Token),
+    Var { lvalue: Token, jumps: Option<usize> },
+    Assign { lvalue: Token, rvalue: Box<Expr>, jumps: Option<usize> },
+    Call {callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
 }
 
 impl Expr {
@@ -26,14 +26,14 @@ impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {
             Expr::Literal(value) => write!(f, "{value}"),
-            Expr::Unary(token, expr) => write!(f, "({token} {expr})"),
-            Expr::Binary(expr1, token, expr2) => {
-                write!(f, "({token} {expr1} {expr2})")
+            Expr::Unary { op, expr } => write!(f, "({op} {expr})"),
+            Expr::Binary { left, op, right } => {
+                write!(f, "({op} {left} {right})")
             },
             Expr::Grouping(expr) => write!(f, "(group {expr})"),
-            Expr::Var(ident, ..) => write!(f, "var({ident})"),
-            Expr::Assign(lvalue, expr, ..) => write!(f, "({lvalue} = {expr})"),
-            Expr::Call(callee, args, _) => write!(f, "({callee} calls {args:?})"),
+            Expr::Var { lvalue, .. } => write!(f, "var({lvalue})"),
+            Expr::Assign { lvalue, rvalue, .. } => write!(f, "({lvalue} = {rvalue})"),
+            Expr::Call { callee, args, ctx: _ } => write!(f, "({callee} calls {args:?})"),
         }
     }
 }
