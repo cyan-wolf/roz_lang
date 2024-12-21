@@ -299,7 +299,7 @@ impl Parser {
         }
 
         self.try_match(
-            &TokenKind::Op(Op::LeftBrace),
+            &TokenKind::Op(Op::RightBrace),
             |_| "expected '}' after class body".to_owned(),
         )?;
         
@@ -499,7 +499,23 @@ impl Parser {
                 )?;
 
                 expr = Expr::Call {callee: expr.to_box(), args, ctx: paren };
-            } 
+            }
+            else if self.match_any([TokenKind::Op(Op::Dot)]) {
+                if let TokenKind::Literal(Literal::Ident(..)) = self.peek().kind() {
+                    self.advance();
+                    let ident = self.prev().clone();
+
+                    expr = Expr::Get { source: expr.to_box(), ident };
+                } else {
+                    let token = self.peek().clone();
+                    let error = SyntaxError::new(
+                        token.line(),
+                        "expected property name after '.'".to_owned(),
+                        Some(token),
+                    );
+                    break Err(error);
+                }
+            }
             else {
                 break Ok(expr);
             }

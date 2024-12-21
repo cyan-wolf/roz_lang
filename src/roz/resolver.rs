@@ -101,7 +101,7 @@ impl Resolver {
                 self.define(ident);
 
                 for decl in methods {
-                    let FunDecl {name, ref params, body} = decl;
+                    let FunDecl {ref name, ref params, body} = decl;
                     
                     // TODO: Find a way to avoid having to make this code be 
                     // copy-pasted from the Stmt::Fun(..) branch.
@@ -192,6 +192,9 @@ impl Resolver {
                 for arg in args {
                     self.resolve_expr(arg, ctx);
                 }
+            },
+            Expr::Get { source, ident: _ } => {
+                self.resolve_expr(source, ctx);
             },
         }
     }

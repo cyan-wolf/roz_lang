@@ -14,6 +14,7 @@ pub enum Expr {
     Var { lvalue: Token, jumps: Option<usize> },
     Assign { lvalue: Token, rvalue: Box<Expr>, jumps: Option<usize> },
     Call {callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
+    Get { source: Box<Expr>, ident: Token },
 }
 
 impl Expr {
@@ -34,6 +35,7 @@ impl Display for Expr {
             Expr::Var { lvalue, .. } => write!(f, "var({lvalue})"),
             Expr::Assign { lvalue, rvalue, .. } => write!(f, "({lvalue} = {rvalue})"),
             Expr::Call { callee, args, ctx: _ } => write!(f, "({callee} calls {args:?})"),
+            Expr::Get { source, ident } => write!(f, "{source}.{ident}")
         }
     }
 }

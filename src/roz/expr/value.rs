@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::roz::{
     stmt::Stmt, 
@@ -7,12 +7,19 @@ use crate::roz::{
 };
 
 #[derive(Debug, Clone)]
+pub struct Class {
+    pub name: String,
+}
+
+#[derive(Debug, Clone)]
 pub enum Value {
     Num(f64),
     Str(String),
     Bool(bool),
     NativeFun(NativeFun),
     Fun(Option<String>, Vec<Token>, Vec<Stmt>, RcCell<Environment>),
+    Class(Class),
+    Instance { class: Class, fields: HashMap<String, Value> },
     Nil,
 }
 
@@ -25,6 +32,10 @@ impl Value {
             Value::Bool(_) => "<boolean>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
             Value::Fun(..) => "<fun>".to_owned(),
+            Value::Class(..) => "<class>".to_owned(),
+            Value::Instance { class: Class { name, .. }, .. } => {
+                format!("<instanceof {name}>")
+            },
             Value::Nil => "<nil>".to_owned(),
         }
     }
@@ -68,6 +79,10 @@ impl Display for Value {
                 } else {
                     write!(f, "{{function}}")
                 }
+            },
+            Value::Class(Class { name }) => write!(f, "{{class {name}}}"),
+            Value::Instance { class, fields } => {
+                todo!()
             },
             Value::Nil => write!(f, "nil"),
         }

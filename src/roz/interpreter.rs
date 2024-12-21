@@ -3,7 +3,7 @@ pub mod environment;
 pub use environment::{Environment, RcCell};
 
 use std::rc::Rc;
-use super::expr::value::NativeFun;
+use super::expr::value::{Class, NativeFun};
 use super::expr::{Expr, Value};
 use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Op, Token, TokenKind};
@@ -143,7 +143,12 @@ impl Interpreter {
                     .define(name, fun);
             },
             Stmt::Class { name, methods } => {
-                unimplemented!()
+                let name = name.extract_ident();
+                let class = Value::Class(Class { name: name.to_owned() });
+
+                self.curr_env
+                    .borrow_mut()
+                    .define(name.to_owned(), class);
             },
             Stmt::Return { ctx: _, ret_value } => {
                 let val = self.evaluate(ret_value)?;
@@ -532,6 +537,33 @@ impl Interpreter {
 
                 self.try_call_value(callee, args, ctx)
             },
+            Expr::Get { source, ident } => {
+                let source = self.evaluate(*source)?;
+
+                match source {
+                    Value::Instance { class, fields } => {
+                        fields.get(ident.extract_ident())
+                            .cloned()
+                            .ok_or_else(|| {
+                                let err = RuntimeError::new(
+                                    format!("property {ident} not found on instance"),
+                                    ident,
+                                );
+                                RuntimeOutcome::Error(err)
+                            })
+                    },
+                    _ => {
+                        let type_ = source.get_type();
+
+                        let err = RuntimeError::new(
+                            format!("value of type {type_} cannot be accessed"),
+                            ident,
+                        );
+
+                        Err(RuntimeOutcome::Error(err))
+                    },
+                }
+            },
         }
     }
 
@@ -582,6 +614,9 @@ impl Interpreter {
                 self.check_arity(&args, native_fun.arity(), &ctx)?;
 
                 Ok(self.call_native_fun(native_fun, args, ctx)?)
+            },
+            Value::Class(Class { name }) => {
+                unimplemented!()
             },
             _ => {
                 let err = RuntimeError::new(
