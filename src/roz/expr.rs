@@ -13,8 +13,9 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Var { lvalue: Token, jumps: Option<usize> },
     Assign { lvalue: Token, rvalue: Box<Expr>, jumps: Option<usize> },
-    Call {callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
-    Get { source: Box<Expr>, ident: Token },
+    Call { callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
+    Get { source: Box<Expr>, property: Token },
+    Set { source: Box<Expr>, property: Token, rvalue: Box<Expr> },
 }
 
 impl Expr {
@@ -35,7 +36,10 @@ impl Display for Expr {
             Expr::Var { lvalue, .. } => write!(f, "var({lvalue})"),
             Expr::Assign { lvalue, rvalue, .. } => write!(f, "({lvalue} = {rvalue})"),
             Expr::Call { callee, args, ctx: _ } => write!(f, "({callee} calls {args:?})"),
-            Expr::Get { source, ident } => write!(f, "{source}.{ident}")
+            Expr::Get { source, property } => write!(f, "(get {source}.{property})"),
+            Expr::Set { source, property, rvalue } => {
+                write!(f, "(set {source}.{property} = {rvalue})")
+            },
         }
     }
 }

@@ -193,8 +193,13 @@ impl Resolver {
                     self.resolve_expr(arg, ctx);
                 }
             },
-            Expr::Get { source, ident: _ } => {
+            Expr::Get { source, property: _ } => {
                 self.resolve_expr(source, ctx);
+            },
+            Expr::Set { source, property: _, rvalue } => {
+                self.resolve_expr(source, ctx);
+                self.resolve_expr(rvalue, ctx);
+
             },
         }
     }

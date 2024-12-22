@@ -144,7 +144,23 @@ impl Interpreter {
             },
             Stmt::Class { name, methods } => {
                 let name = name.extract_ident();
-                let class = Value::Class(Class { name: name.to_owned() });
+
+                // Convert the method declarations into function values.
+                let method_fun_vals: Vec<_> = methods.into_iter()
+                    .map(|method| {
+                        Value::Fun(
+                            Some(method.name), 
+                            method.params, 
+                            method.body, 
+                            Rc::clone(&self.curr_env),
+                        )
+                    })
+                    .collect();
+
+                let class = Value::Class(Class { 
+                    name: name.to_owned(), 
+                    methods: method_fun_vals,
+                });
 
                 self.curr_env
                     .borrow_mut()
@@ -537,29 +553,41 @@ impl Interpreter {
 
                 self.try_call_value(callee, args, ctx)
             },
-            Expr::Get { source, ident } => {
+            Expr::Get { source, property } => {
                 let source = self.evaluate(*source)?;
 
                 match source {
-                    Value::Instance { class, fields } => {
-                        fields.get(ident.extract_ident())
-                            .cloned()
-                            .ok_or_else(|| {
-                                let err = RuntimeError::new(
-                                    format!("property {ident} not found on instance"),
-                                    ident,
-                                );
-                                RuntimeOutcome::Error(err)
-                            })
+                    Value::Instance(instance) => {
+                        let val = instance.borrow().access(property)?;
+                        Ok(val)
                     },
                     _ => {
                         let type_ = source.get_type();
 
                         let err = RuntimeError::new(
                             format!("value of type {type_} cannot be accessed"),
-                            ident,
+                            property,
                         );
+                        Err(RuntimeOutcome::Error(err))
+                    },
+                }
+            },
+            Expr::Set { source, property, rvalue } => {
+                let source = self.evaluate(*source)?;
 
+                match source {
+                    Value::Instance(instance) => {
+                        let value = self.evaluate(*rvalue)?;
+                        let val = instance.borrow_mut().set(property, value)?;
+                        Ok(val)
+                    },
+                    _ => {
+                        let type_ = source.get_type();
+
+                        let err = RuntimeError::new(
+                            format!("value of type {type_} cannot be accessed"),
+                            property,
+                        );
                         Err(RuntimeOutcome::Error(err))
                     },
                 }
@@ -615,7 +643,7 @@ impl Interpreter {
 
                 Ok(self.call_native_fun(native_fun, args, ctx)?)
             },
-            Value::Class(Class { name }) => {
+            Value::Class(Class { name, methods }) => {
                 unimplemented!()
             },
             _ => {

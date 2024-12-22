@@ -1,4 +1,8 @@
-use std::{collections::HashMap, fmt::Display};
+mod class;
+
+pub use class::{Class, Instance};
+
+use std::fmt::Display;
 
 use crate::roz::{
     stmt::Stmt, 
@@ -6,10 +10,7 @@ use crate::roz::{
     interpreter::{Environment, RcCell},
 };
 
-#[derive(Debug, Clone)]
-pub struct Class {
-    pub name: String,
-}
+
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -19,7 +20,7 @@ pub enum Value {
     NativeFun(NativeFun),
     Fun(Option<String>, Vec<Token>, Vec<Stmt>, RcCell<Environment>),
     Class(Class),
-    Instance { class: Class, fields: HashMap<String, Value> },
+    Instance(RcCell<Instance>),
     Nil,
 }
 
@@ -33,8 +34,11 @@ impl Value {
             Value::NativeFun(_) => "<native fun>".to_owned(),
             Value::Fun(..) => "<fun>".to_owned(),
             Value::Class(..) => "<class>".to_owned(),
-            Value::Instance { class: Class { name, .. }, .. } => {
-                format!("<instanceof {name}>")
+            Value::Instance(instance) => {
+                format!(
+                    "<instanceof {class_name}>",
+                    class_name = &instance.borrow().class().name,
+                )
             },
             Value::Nil => "<nil>".to_owned(),
         }
@@ -80,8 +84,8 @@ impl Display for Value {
                     write!(f, "{{function}}")
                 }
             },
-            Value::Class(Class { name }) => write!(f, "{{class {name}}}"),
-            Value::Instance { class, fields } => {
+            Value::Class(Class { name, .. }) => write!(f, "{{class {name}}}"),
+            Value::Instance(instance) => {
                 todo!()
             },
             Value::Nil => write!(f, "nil"),

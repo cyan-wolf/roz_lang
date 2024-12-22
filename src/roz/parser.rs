@@ -357,12 +357,22 @@ impl Parser {
 
         if self.match_any([TokenKind::Op(Op::Eq)]) {
             let equals = self.prev().clone();
-            let rvalue = self.assignment()?;
+            let rvalue = self.assignment()?.to_box();
 
-            if let Expr::Var {lvalue, ..} = expr {
+            // If the left hand side of the '=' was a simple variable access,
+            // then the whole expression is a simple assignment.
+            if let Expr::Var { lvalue, .. } = expr {
                 // The jumps are set later in the resolver.
-                Ok(Expr::Assign {lvalue, rvalue: rvalue.to_box(), jumps: None })
-            } else {
+                let assign_expr = Expr::Assign { lvalue, rvalue, jumps: None };
+                Ok(assign_expr)
+            }
+            // If the left hand side of the '=' was a property access 
+            // (a "get" expression), then the whole expression is a "set" expression.
+            else if let Expr::Get { source , property } = expr {
+                let set_expr = Expr::Set { source, property, rvalue };
+                Ok(set_expr)
+            }
+            else {
                 let err = SyntaxError::new(
                     equals.line(),
                     "invalid assignment target".to_owned(),
@@ -505,7 +515,7 @@ impl Parser {
                     self.advance();
                     let ident = self.prev().clone();
 
-                    expr = Expr::Get { source: expr.to_box(), ident };
+                    expr = Expr::Get { source: expr.to_box(), property: ident };
                 } else {
                     let token = self.peek().clone();
                     let error = SyntaxError::new(
