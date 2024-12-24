@@ -2,14 +2,16 @@ use std::collections::HashMap;
 
 use crate::roz::{error::RuntimeError, token::Token};
 
-use super::Value;
+use super::{Fun, Value};
 
 #[derive(Debug, Clone)]
+/// Runtime representation of a class.
 pub struct Class {
     pub name: String,
-    pub methods: Vec<Value>,
+    pub methods: HashMap<String, Fun>,
 }
 
+/// Runtime representation of a class instance.
 #[derive(Debug, Clone)]
 pub struct Instance {
     class: Class,

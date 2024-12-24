@@ -4,7 +4,7 @@ pub use environment::Environment;
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use super::expr::value::{Class, Instance, NativeFun};
+use super::expr::value::{Class, Fun, Instance, NativeFun};
 use super::expr::{Expr, Value};
 use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Op, Token, TokenKind};
@@ -133,12 +133,12 @@ impl Interpreter {
                 // Make the function object. Stores a reference to the 
                 // current environment (at definition time), which allows 
                 // the implementation of closures.
-                let fun = Value::Fun(
-                    Some(name.clone()), 
+                let fun = Value::Fun(Fun {
+                    name: Some(name.clone()), 
                     params, 
                     body, 
-                    Rc::clone(&self.curr_env),
-                );
+                    env: Rc::clone(&self.curr_env),
+                });
 
                 self.curr_env
                     .borrow_mut()
@@ -148,13 +148,16 @@ impl Interpreter {
                 let name = name.extract_ident();
 
                 // Convert the method declarations into function values.
-                let method_fun_vals: Vec<_> = methods.into_iter()
+                let method_fun_vals: HashMap<_, _> = methods.into_iter()
                     .map(|method| {
-                        Value::Fun(
-                            Some(method.name), 
-                            method.params, 
-                            method.body, 
-                            Rc::clone(&self.curr_env),
+                        (
+                            method.name.clone(),
+                            Fun {
+                                name: Some(method.name), 
+                                params: method.params, 
+                                body: method.body, 
+                                env: Rc::clone(&self.curr_env),
+                            },
                         )
                     })
                     .collect();
@@ -613,7 +616,7 @@ impl Interpreter {
 
     fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {
         match callee {
-            Value::Fun(_, params, body, env_at_def) => {
+            Value::Fun(Fun { name: _, params, body, env: env_at_def }) => {
                 self.check_arity(&args, params.len(), &ctx)?;
 
                 // The function's local environment is enclosed by the 

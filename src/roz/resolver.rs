@@ -108,8 +108,11 @@ impl Resolver {
                     self.declare(name.clone());
                     self.define(name.clone());
 
+                    // TODO: Clean up this code.
                     ctx.add_effect(Effect::InFunction);
+                    ctx.add_effect(Effect::InMethod);
                     self.resolve_fun(params, body, ctx);
+                    ctx.remove_effect(&Effect::InMethod);
                     ctx.remove_effect(&Effect::InFunction);
                 }
             },

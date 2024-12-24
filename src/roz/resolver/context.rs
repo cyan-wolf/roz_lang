@@ -3,8 +3,11 @@ use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Effect {
+    /// Used for restricting the use of `return`. 
     InFunction,
-    // TODO: Use this variant to add `break`/`continue` statements.
+    /// Used for restricting the use of `this`.
+    InMethod,
+    /// Used for restricting the use of `break` and `continue`.
     InLoop,
 }
 

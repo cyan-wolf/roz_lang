@@ -1,16 +1,13 @@
 mod class;
+mod fun;
 
+pub use fun::Fun;
 pub use class::{Class, Instance};
 
 use std::fmt::Display;
 use std::rc::Rc;
 
-use crate::roz::{
-    util::RcCell,
-    stmt::Stmt, 
-    token::Token,
-    interpreter::Environment,
-};
+use crate::roz::util::RcCell;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -18,7 +15,7 @@ pub enum Value {
     Str(String),
     Bool(bool),
     NativeFun(NativeFun),
-    Fun(Option<String>, Vec<Token>, Vec<Stmt>, RcCell<Environment>),
+    Fun(Fun),
     Class(Class),
     Instance(RcCell<Instance>),
     Nil,
@@ -81,7 +78,7 @@ impl Display for Value {
             Value::NativeFun(native_fun) => {
                 write!(f, "{{native function {native_fun}}}")
             },
-            Value::Fun(name, ..) => {
+            Value::Fun(Fun { name, .. }) => {
                 if let Some(name) = name {
                     write!(f, "{{function {name}}}")
                 } else {
