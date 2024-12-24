@@ -18,12 +18,6 @@ pub enum Expr {
     Set { source: Box<Expr>, property: Token, rvalue: Box<Expr> },
 }
 
-impl Expr {
-    pub fn to_box(self) -> Box<Self> {
-        Box::new(self)
-    }
-}
-
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {

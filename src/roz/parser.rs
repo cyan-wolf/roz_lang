@@ -2,6 +2,7 @@ use super::error::{RozError, SyntaxError};
 use super::expr::{Expr, Value};
 use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
+use super::util::ToBox;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -227,7 +228,7 @@ impl Parser {
         let body = self.statement_block()?;
 
         let stmt = Stmt::For {
-            init: Box::new(init), 
+            init: init.to_box(), 
             cond,
             side_effect,
             body,

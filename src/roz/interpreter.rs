@@ -1,13 +1,15 @@
 pub mod environment;
 
-pub use environment::{Environment, RcCell};
+pub use environment::Environment;
 
+use std::collections::HashMap;
 use std::rc::Rc;
-use super::expr::value::{Class, NativeFun};
+use super::expr::value::{Class, Instance, NativeFun};
 use super::expr::{Expr, Value};
 use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Op, Token, TokenKind};
 use super::error::{RozError, RuntimeError};
+use super::util::{RcCell, ToRcCell};
 
 // Models runtime errors and other special control flow
 // constructs (such as return, break, continue, etc.).
@@ -643,8 +645,13 @@ impl Interpreter {
 
                 Ok(self.call_native_fun(native_fun, args, ctx)?)
             },
-            Value::Class(Class { name, methods }) => {
-                unimplemented!()
+            Value::Class(class) => {
+                // Placeholder.
+                self.check_arity(&args, 0, &ctx)?;
+
+                let instance = Instance::new(class, HashMap::new());
+
+                Ok(Value::Instance(instance.to_rc_cell()))
             },
             _ => {
                 let err = RuntimeError::new(

@@ -4,7 +4,6 @@ use crate::roz::{error::RuntimeError, token::Token};
 
 use super::Value;
 
-
 #[derive(Debug, Clone)]
 pub struct Class {
     pub name: String,
@@ -18,6 +17,13 @@ pub struct Instance {
 }
 
 impl Instance {
+    pub fn new(class: Class, fields: HashMap<String, Value>) -> Self {
+        Self {
+            class,
+            fields,
+        }
+    }
+
     pub fn class(&self) -> &Class {
         &self.class
     }

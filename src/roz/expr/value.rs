@@ -3,14 +3,14 @@ mod class;
 pub use class::{Class, Instance};
 
 use std::fmt::Display;
+use std::rc::Rc;
 
 use crate::roz::{
+    util::RcCell,
     stmt::Stmt, 
     token::Token,
-    interpreter::{Environment, RcCell},
+    interpreter::Environment,
 };
-
-
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -62,6 +62,10 @@ impl Value {
             (Value::Str(a), Value::Str(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
             (Value::NativeFun(a), Value::NativeFun(b)) => a == b,
+            (Value::Instance(inst1), Value::Instance(inst2)) => {
+                // Two instances are equal if they point to the same allocation.
+                Rc::ptr_eq(inst1, inst2)
+            },
             (Value::Nil, Value::Nil) => true,
             _ => false,
         }
@@ -86,7 +90,12 @@ impl Display for Value {
             },
             Value::Class(Class { name, .. }) => write!(f, "{{class {name}}}"),
             Value::Instance(instance) => {
-                todo!()
+                let class_name = instance.borrow()
+                    .class()
+                    .name
+                    .to_owned();
+
+                write!(f, "{{instance of {class_name}}}")
             },
             Value::Nil => write!(f, "nil"),
         }

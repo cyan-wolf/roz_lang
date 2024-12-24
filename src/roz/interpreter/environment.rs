@@ -1,13 +1,10 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use crate::roz::{
     error::RuntimeError, 
     expr::Value, 
-    token::Token,
+    token::Token, util::RcCell,
 };
-
-/// A reference counted mutable pointer.
-pub type RcCell<T> = Rc<RefCell<T>>;
 
 #[derive(Debug)]
 pub struct Environment {
@@ -28,10 +25,6 @@ impl Environment {
             enclosing: Some(enclosing),
             map: HashMap::new(),
         }
-    }
-
-    pub fn to_rc_cell(self) -> RcCell<Self> {
-        Rc::new(RefCell::new(self))
     }
 
     pub fn define(&mut self, ident: String, val: Value) {
