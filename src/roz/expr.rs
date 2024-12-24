@@ -16,6 +16,7 @@ pub enum Expr {
     Call { callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
     Get { source: Box<Expr>, property: Token },
     Set { source: Box<Expr>, property: Token, rvalue: Box<Expr> },
+    Me { ctx: Token },
 }
 
 impl Display for Expr {
@@ -34,6 +35,7 @@ impl Display for Expr {
             Expr::Set { source, property, rvalue } => {
                 write!(f, "(set {source}.{property} = {rvalue})")
             },
+            Expr::Me { .. } => write!(f, "var(me)"),
         }
     }
 }

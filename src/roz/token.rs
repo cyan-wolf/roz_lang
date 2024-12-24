@@ -91,6 +91,7 @@ pub enum Keyword {
     Div,
     Break,
     Continue,
+    Me,
 }
 
 impl Display for Op {
@@ -155,6 +156,7 @@ impl Display for Keyword {
             Keyword::Div => "div",
             Keyword::Break => "break",
             Keyword::Continue => "continue",
+            Keyword::Me => "me",
         };
 
         write!(f, "{str}")

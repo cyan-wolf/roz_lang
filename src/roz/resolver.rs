@@ -204,6 +204,19 @@ impl Resolver {
                 self.resolve_expr(rvalue, ctx);
 
             },
+            Expr::Me { ctx: ctx_token } => {
+                // Generate an error if 'me' appears outside of a method.
+                if !ctx.has_effect(&Effect::InMethod) {
+                    let error = ResolutionError::new(
+                        "'me' keyword outside of method".to_owned(),
+                        ctx_token.clone(),
+                    );
+                    self.errs.push(error);
+                }
+                
+                // TODO: figure out how to resolve this AST node
+                todo!()
+            },
         }
     }
 

@@ -268,6 +268,7 @@ impl Scanner {
             "div" => Keyword::Div,
             "break" => Keyword::Break,
             "continue" => Keyword::Continue,
+            "me" => Keyword::Me,
             _ => return None,
         };
 

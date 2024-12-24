@@ -637,6 +637,10 @@ impl Parser {
                 // Set the jumps to None, since those are set later in the resolver.
                 Expr::Var { lvalue: self.prev().clone(), jumps: None }
             },
+            TokenKind::Keyword(Keyword::Me) => {
+                self.advance();
+                Expr::Me { ctx: self.prev().clone() }
+            },
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();
 
