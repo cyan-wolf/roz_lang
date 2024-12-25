@@ -563,7 +563,7 @@ impl Interpreter {
 
                 match source {
                     Value::Instance(instance) => {
-                        let val = instance.borrow().access(property)?;
+                        let val = Instance::access(instance, property)?;
                         Ok(val)
                     },
                     _ => {
@@ -597,8 +597,10 @@ impl Interpreter {
                     },
                 }
             },
-            Expr::Me { ctx } => {
-                unimplemented!()
+            Expr::Me { ctx: _ } => {
+                // Note: 'me' expressions get resolved to `Expr::Var` expressions
+                // before reaching the interpreter.
+                unreachable!("unexpected error: unresolved keyword 'me'")
             },
         }
     }

@@ -4,7 +4,12 @@ use std::collections::HashMap;
 
 use context::{Context, Effect};
 
-use super::{error::{ResolutionError, RozError}, expr::Expr, stmt::{FunDecl, Stmt}, token::Token};
+use super::{
+    error::{ResolutionError, RozError}, 
+    expr::Expr, 
+    stmt::{FunDecl, Stmt}, 
+    token::Token,
+};
 
 pub struct Resolver {
     scopes: Vec<HashMap<String, bool>>,
@@ -87,33 +92,31 @@ impl Resolver {
                 // A for loop creates an extra scope compared to a while loop.
                 self.end_scope();
             },
-            Stmt::Fun(FunDecl { ref name, ref params, body} ) => {
-                self.declare(name.clone());
-                self.define(name.clone());
-
-                ctx.add_effect(Effect::InFunction);
-                self.resolve_fun(params, body, ctx);
-                ctx.remove_effect(&Effect::InFunction);
+            Stmt::Fun(fun_decl) => {
+                self.resolve_fun(fun_decl, ctx);
             },
             Stmt::Class { ref name, methods } => {
                 let ident = name.extract_ident().to_owned();
                 self.declare(ident.clone());
                 self.define(ident);
 
-                for decl in methods {
-                    let FunDecl {ref name, ref params, body} = decl;
-                    
-                    // TODO: Find a way to avoid having to make this code be 
-                    // copy-pasted from the Stmt::Fun(..) branch.
-                    self.declare(name.clone());
-                    self.define(name.clone());
+                for method_decl in methods {
+                    // Begin the additional scope that contains 'me'.
+                    self.begin_scope();
 
-                    // TODO: Clean up this code.
-                    ctx.add_effect(Effect::InFunction);
+                    // Add 'me' to the current scope.
+                    self.scopes
+                        .last_mut()
+                        .unwrap()
+                        .insert("me".to_owned(), true);
+
+                    // Resolve the method.
                     ctx.add_effect(Effect::InMethod);
-                    self.resolve_fun(params, body, ctx);
+                    self.resolve_fun(method_decl, ctx);
                     ctx.remove_effect(&Effect::InMethod);
-                    ctx.remove_effect(&Effect::InFunction);
+
+                    // End the additional scope that contains 'me'.
+                    self.end_scope();
                 }
             },
             Stmt::Return { ctx: ret_token, ret_value } => {
@@ -204,18 +207,22 @@ impl Resolver {
                 self.resolve_expr(rvalue, ctx);
 
             },
-            Expr::Me { ctx: ctx_token } => {
+            Expr::Me { ctx: ref ctx_token } => {
                 // Generate an error if 'me' appears outside of a method.
                 if !ctx.has_effect(&Effect::InMethod) {
                     let error = ResolutionError::new(
-                        "'me' keyword outside of method".to_owned(),
+                        "keyword 'me' outside of method".to_owned(),
                         ctx_token.clone(),
                     );
                     self.errs.push(error);
                 }
+
+                // Change the current expression into an `Expr::Var`
+                // before resolving.
+                *expr = Expr::Var { lvalue: ctx_token.clone(), jumps: None };
                 
-                // TODO: figure out how to resolve this AST node
-                todo!()
+                // This delegates to the `Expr::Var` resolution algorithm.
+                self.resolve_expr(expr, ctx);
             },
         }
     }
@@ -245,7 +252,14 @@ impl Resolver {
     }
 
     /// Resolve a function and any sub-statements.
-    fn resolve_fun(&mut self, params: &[Token], body: &mut [Stmt], ctx: &mut Context) {
+    fn resolve_fun(&mut self, fun_decl: &mut FunDecl, ctx: &mut Context) {
+        ctx.add_effect(Effect::InFunction);
+
+        let FunDecl { ref name, ref params, body } = fun_decl;
+
+        self.declare(name.clone());
+        self.define(name.clone());
+
         self.begin_scope();
 
         for param in params {
@@ -258,6 +272,8 @@ impl Resolver {
         // began a scope in this function (`Resolver::resolve_fun`).
         self.resolve_statements(body, ctx);
         self.end_scope();
+
+        ctx.remove_effect(&Effect::InFunction);
     }
 
     fn begin_scope(&mut self) {

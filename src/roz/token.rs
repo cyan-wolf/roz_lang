@@ -21,10 +21,11 @@ impl Token {
     }
 
     /// Returns the string identifier of this token. 
-    /// Note: panics if this token is not an identifier.
+    /// Note: panics if this token is not an identifier or a `me` token.
     pub fn extract_ident(&self) -> &str {
         match self.kind {
             TokenKind::Literal(Literal::Ident(ref ident)) => ident,
+            TokenKind::Keyword(Keyword::Me) => "me",
             _ => panic!("unexpected error: token '{self}' was not an identifier"),
         }
     }

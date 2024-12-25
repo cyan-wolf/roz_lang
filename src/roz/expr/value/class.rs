@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::roz::{error::RuntimeError, token::Token};
+use crate::roz::{error::RuntimeError, token::Token, util::RcCell};
 
 use super::{Fun, Value};
 
@@ -11,8 +11,27 @@ pub struct Class {
     pub methods: HashMap<String, Fun>,
 }
 
+impl Class {
+    pub fn find_method(&self, method_ident: &Token) -> Result<Fun, RuntimeError> {
+        let method_name = method_ident.extract_ident();
+        if let Some(method) = self.methods.get(method_name) {
+            Ok(method.clone())
+        }
+        else {
+            let error = RuntimeError::new(
+                format!(
+                    "method '{method_name}' not found on class '{class_name}'", 
+                    class_name=self.name
+                ),
+                method_ident.clone(),
+            );
+            Err(error)
+        }
+    }
+}
+
 /// Runtime representation of a class instance.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Instance {
     class: Class,
     fields: HashMap<String, Value>,
@@ -30,9 +49,15 @@ impl Instance {
         &self.class
     }
 
-    pub fn access(&self, property: Token) -> Result<Value, RuntimeError> {
-        if let Some(field) = self.fields.get(property.extract_ident()) {
+    pub fn access(this: RcCell<Self>, property: Token) -> Result<Value, RuntimeError> {
+        if let Some(field) = this.borrow().fields.get(property.extract_ident()) {
             Ok(field.clone())
+        }
+        else if let Ok(mut method) = this.borrow().class.find_method(&property) {
+            // Bind the method with this instance.
+            method.bind(Value::Instance(Rc::clone(&this)));
+
+            Ok(Value::Fun(method))
         }
         else {
             let err = RuntimeError::new(
