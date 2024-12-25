@@ -259,7 +259,6 @@ impl Scanner {
             "print" => Keyword::Print,
             "return" => Keyword::Return,
             "super" => Keyword::Super,
-            "this" => Keyword::This,
             "true" => Keyword::True,
             "var" => Keyword::Var,
             "while" => Keyword::While,
