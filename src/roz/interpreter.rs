@@ -649,13 +649,30 @@ impl Interpreter {
 
                 Ok(self.call_native_fun(native_fun, args, ctx)?)
             },
-            Value::Class(class) => {
-                // Placeholder.
-                self.check_arity(&args, 0, &ctx)?;
+            Value::Class(mut class) => {
+                // Create an empty instance.
+                let instance = Instance::new(
+                    class.clone(), 
+                    HashMap::new(),
+                ).to_rc_cell();
 
-                let instance = Instance::new(class, HashMap::new());
+                if let Some(constructor) = class.methods.get_mut("init") {
+                    // The arity of the class call is the same as the constructor's.
+                    self.check_arity(&args, constructor.params.len(), &ctx)?;
 
-                Ok(Value::Instance(instance.to_rc_cell()))
+                    // Bind the instance to the constructor.
+                    constructor.bind(Value::Instance(Rc::clone(&instance)));
+
+                    // Run the constructor.
+                    self.try_call_value(Value::Fun(constructor.clone()), args, ctx)?;
+                } 
+                else {
+                    // If there is no constructor, then the class call
+                    // has an arity of 0.
+                    self.check_arity(&args, 0, &ctx)?;
+                }
+
+                Ok(Value::Instance(instance))
             },
             _ => {
                 let err = RuntimeError::new(
@@ -670,7 +687,7 @@ impl Interpreter {
     fn check_arity(&self, args: &[Value], arity: usize, ctx: &Token) -> Result<(), RuntimeOutcome> {
         if args.len() != arity {
             let err = RuntimeError::new(
-                format!("expected {} arguments, but got {}", args.len(), arity),
+                format!("expected {} arguments, but got {}", arity, args.len()),
                 ctx.clone(),
             );
             return Err(err)?;
