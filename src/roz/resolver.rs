@@ -52,9 +52,6 @@ impl Resolver {
             Stmt::Expr(expr) => {
                 self.resolve_expr(expr, ctx);
             },
-            Stmt::Print(expr) => {
-                self.resolve_expr(expr, ctx);
-            },
             Stmt::DeclareVar { ident, init } => {
                 self.declare(ident.clone());
                 self.resolve_expr(init, ctx);

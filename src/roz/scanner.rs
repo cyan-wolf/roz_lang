@@ -256,7 +256,6 @@ impl Scanner {
             "if" => Keyword::If,
             "nil" => Keyword::Nil,
             "or" => Keyword::Or,
-            "print" => Keyword::Print,
             "return" => Keyword::Return,
             "super" => Keyword::Super,
             "true" => Keyword::True,

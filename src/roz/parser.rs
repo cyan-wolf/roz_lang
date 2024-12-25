@@ -43,10 +43,7 @@ impl Parser {
 
     /// Parses a statement.
     fn statement(&mut self) -> Result<Stmt, SyntaxError> {
-        if self.match_any([TokenKind::Keyword(Keyword::Print)]) {
-            self.statement_print()
-        }
-        else if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
+        if self.match_any([TokenKind::Keyword(Keyword::Var)]) {
             self.statement_var_decl()
         }
         else if self.match_any([TokenKind::Keyword(Keyword::Fun)]) {
@@ -81,18 +78,6 @@ impl Parser {
         else {
             self.statement_expr()
         }
-    }
-
-    /// Parses a print statement, i.e. `print <expr>;`.
-    fn statement_print(&mut self) -> Result<Stmt, SyntaxError> {
-        let expr = self.expression()?;
-
-        self.try_match(
-            &TokenKind::Op(Op::Semicolon), 
-            |_| "expected ';' after value".to_owned(),
-        )?;
-
-        Ok(Stmt::Print(expr))
     }
 
     /// Parses a statement which is just an expression followed by a semicolon.
@@ -690,7 +675,6 @@ impl Parser {
                     | Keyword::Fun
                     | Keyword::For
                     | Keyword::If
-                    | Keyword::Print
                     | Keyword::Return
                     | Keyword::Var
                     | Keyword::While = kw 

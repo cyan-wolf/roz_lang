@@ -3,7 +3,6 @@ use super::{expr::Expr, token::Token};
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Expr(Expr),
-    Print(Expr),
     DeclareVar { ident: String, init: Expr },
     Block(Vec<Stmt>),
     If { cond: Expr, then_branch: Vec<Stmt>, else_branch: Option<Vec<Stmt>> },

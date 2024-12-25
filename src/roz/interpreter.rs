@@ -65,10 +65,6 @@ impl Interpreter {
             Stmt::Expr(expr) => {
                 let _ = self.evaluate(expr)?; // value is discarded
             },
-            Stmt::Print(expr) => {
-                let val = self.evaluate(expr)?;
-                println!("{val}");
-            },
             Stmt::DeclareVar { ident, init } => {
                 let init = self.evaluate(init)?;
 
