@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use super::{expr::{value::Instance, Expr}, interpreter::Environment, stmt::Stmt};
+use super::{expr::{value::Instance, Expr, Value}, interpreter::Environment, stmt::Stmt};
 
 // Utility trait for boxing an AST node.
 pub trait ToBox {
@@ -46,3 +46,4 @@ macro_rules! impl_to_rc_cell {
 // Implement `ToRcCell`.
 impl_to_rc_cell!(Environment);
 impl_to_rc_cell!(Instance);
+impl_to_rc_cell!(Vec<Value>);

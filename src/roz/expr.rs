@@ -11,6 +11,7 @@ pub enum Expr {
     Unary { op: Token, expr: Box<Expr> },
     Binary { left: Box<Expr>, op: Token, right: Box<Expr> },
     Grouping(Box<Expr>),
+    List(Vec<Expr>),
     Var { lvalue: Token, jumps: Option<usize> },
     Assign { lvalue: Token, rvalue: Box<Expr>, jumps: Option<usize> },
     Call { callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
@@ -28,6 +29,15 @@ impl Display for Expr {
                 write!(f, "({op} {left} {right})")
             },
             Expr::Grouping(expr) => write!(f, "(group {expr})"),
+            Expr::List(elems) => {
+                write!(f, "[")?;
+
+                for elem in elems {
+                    write!(f, "{elem} ")?;
+                }
+
+                write!(f, "]")
+            },
             Expr::Var { lvalue, .. } => write!(f, "var({lvalue})"),
             Expr::Assign { lvalue, rvalue, .. } => write!(f, "({lvalue} = {rvalue})"),
             Expr::Call { callee, args, ctx: _ } => write!(f, "({callee} calls {args:?})"),

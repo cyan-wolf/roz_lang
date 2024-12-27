@@ -589,6 +589,34 @@ impl Parser {
         }
     }
 
+    fn list_elements(&mut self) -> Result<Vec<Expr>, SyntaxError> {
+        let mut elems = vec![];
+
+        // The parser doesn't match (advance) the ']' since `Parser::primary` already does so.
+        if self.check_curr(&TokenKind::Op(Op::RightBracket)) {
+            return Ok(elems);
+        }
+
+        loop {
+            elems.push(self.expression()?);
+
+            if elems.len() > 255 {
+                let ctx = self.peek().clone();
+                let err = SyntaxError::new(
+                    ctx.line(),
+                    "list literal cannot have more than 255 elements".to_owned(),
+                        Some(ctx),
+                );
+
+                break Err(err);
+            }
+
+            if !self.match_any([TokenKind::Op(Op::Comma)]) {
+                break Ok(elems);
+            }
+        }
+    }
+
     /// Parses a primary expression, such as an individual value like `"abc"` or `34.5`.
     /// Also parses a grouping expression, such as `(1 + 2 * 8)`.
     fn primary(&mut self) -> Result<Expr, SyntaxError> {
@@ -638,6 +666,19 @@ impl Parser {
                 )?;
 
                 Expr::Grouping(expr.to_box())
+            },
+            TokenKind::Op(Op::LeftBracket) => {
+                self.advance();
+
+                let elems = self.list_elements()?;
+
+                // Look for a ']' and consume it.
+                self.try_match(
+                    &TokenKind::Op(Op::RightBracket), 
+                    |_|  "expected ']' after expression".to_owned(),
+                )?;
+
+                Expr::List(elems)
             },
             _ => {
                 let token = self.peek().clone();

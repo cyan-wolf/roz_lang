@@ -14,6 +14,7 @@ pub enum Value {
     Num(f64),
     Str(String),
     Bool(bool),
+    List(RcCell<Vec<Value>>),
     NativeFun(NativeFun),
     NativeMethod(NativeMethod),
     Fun(Fun),
@@ -29,6 +30,7 @@ impl Value {
             Value::Num(_) => "<number>".to_owned(),
             Value::Str(_) => "<string>".to_owned(),
             Value::Bool(_) => "<boolean>".to_owned(),
+            Value::List(_) => "<list>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
             Value::NativeMethod(_) => "<native method>".to_owned(),
             Value::Fun(..) => "<fun>".to_owned(),
@@ -60,6 +62,16 @@ impl Value {
             (Value::Num(a), Value::Num(b)) => a == b,
             (Value::Str(a), Value::Str(b)) => a == b,
             (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::List(a), Value::List(b)) => {
+                if a.borrow().len() != b.borrow().len() {
+                    return false;
+                }
+                let contents_are_equal = a.borrow().iter()
+                    .zip(b.borrow().iter())
+                    .all(|(elem_a, elem_b)| elem_a.equals(elem_b));
+
+                contents_are_equal
+            },
             (Value::NativeFun(a), Value::NativeFun(b)) => a == b,
             (Value::Instance(inst1), Value::Instance(inst2)) => {
                 // Two instances are equal if they point to the same allocation.
@@ -77,6 +89,19 @@ impl Display for Value {
             Value::Num(num) => write!(f, "{num}"),
             Value::Str(str) => write!(f, "{str}"),
             Value::Bool(bool) => write!(f, "{bool}"),
+            Value::List(elements) => {
+                write!(f, "[")?;
+
+                for i in 0..elements.borrow().len() {
+                    let elem = &elements.borrow()[i];
+                    write!(f, "{elem}")?;
+
+                    if i != elements.borrow().len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, "]")
+            },
             Value::NativeFun(native_fun) => {
                 write!(f, "{{native function {native_fun}}}")
             },
@@ -131,12 +156,22 @@ impl Display for NativeFun {
 #[derive(Debug, Clone)]
 pub enum NativeMethod {
     StrLength(String),
+    ListLength(RcCell<Vec<Value>>),
+    ListGet(RcCell<Vec<Value>>),
+    ListSet(RcCell<Vec<Value>>),
+    ListClone(RcCell<Vec<Value>>),
+    ListSort(RcCell<Vec<Value>>),
 }
 
 impl NativeMethod {
     pub fn arity(&self) -> usize {
         match self {
             Self::StrLength(..) => 0,
+            Self::ListLength(..) => 0,
+            Self::ListGet(..) => 1,
+            Self::ListSet(..) => 2,
+            Self::ListClone(..) => 0,
+            Self::ListSort(..) => 0,
         }
     }
 }
@@ -145,6 +180,11 @@ impl Display for NativeMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::StrLength(..) => write!(f, "length"),
+            Self::ListLength(..) => write!(f, "length"),
+            Self::ListGet(..) => write!(f, "get"),
+            Self::ListSet(..) => write!(f, "set"),
+            Self::ListClone(..) => write!(f, "clone"),
+            Self::ListSort(..) => write!(f, "sort"),
         }
     }
 }

@@ -166,6 +166,11 @@ impl Resolver {
             Expr::Grouping(expr) => {
                 self.resolve_expr(&mut *expr, ctx);
             },
+            Expr::List(elements) => {
+                for elem in elements {
+                    self.resolve_expr(elem, ctx);
+                }
+            },
             Expr::Var { ref lvalue, jumps } => {
                 if let Some(scope) = self.scopes.last() {
                     let ident = lvalue.extract_ident();

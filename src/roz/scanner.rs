@@ -57,6 +57,8 @@ impl Scanner {
             ')' => Token::new(TokenKind::Op(Op::RightParen), self.loc.line),
             '{' => Token::new(TokenKind::Op(Op::LeftBrace), self.loc.line),
             '}' => Token::new(TokenKind::Op(Op::RightBrace), self.loc.line),
+            '[' => Token::new(TokenKind::Op(Op::LeftBracket), self.loc.line),
+            ']' => Token::new(TokenKind::Op(Op::RightBracket), self.loc.line),
             ',' => Token::new(TokenKind::Op(Op::Comma), self.loc.line),
             '.' => Token::new(TokenKind::Op(Op::Dot), self.loc.line),
             '-' => Token::new(TokenKind::Op(Op::Minus), self.loc.line),

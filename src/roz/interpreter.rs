@@ -527,6 +527,13 @@ impl Interpreter {
                 }
             },
             Expr::Grouping(expr) => self.evaluate(*expr),
+            Expr::List(exprs) => {
+                let elems = exprs.into_iter()
+                    .map(|expr| self.evaluate(expr))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Ok(Value::List(elems.to_rc_cell()))
+            },
             Expr::Var { lvalue, jumps } => {
                 let actual_env = self.find_actual_env(jumps);
                 let val = actual_env
@@ -566,6 +573,32 @@ impl Interpreter {
                         match property.extract_ident() {
                             "length" => {
                                 Ok(Value::NativeMethod(NativeMethod::StrLength(string)))
+                            },
+                            unknown => {
+                                let err = RuntimeError::new(
+                                    format!("property '{unknown}' not found on type"),
+                                    property,
+                                );
+                                Err(RuntimeOutcome::Error(err))
+                            },
+                        }
+                    },
+                    Value::List(list) => {
+                        match property.extract_ident() {
+                            "length" => {
+                                Ok(Value::NativeMethod(NativeMethod::ListLength(list)))
+                            },
+                            "get" => {
+                                Ok(Value::NativeMethod(NativeMethod::ListGet(list)))
+                            },
+                            "set" => {
+                                Ok(Value::NativeMethod(NativeMethod::ListSet(list)))
+                            },
+                            "clone" => {
+                                Ok(Value::NativeMethod(NativeMethod::ListClone(list)))
+                            },
+                            "sort" => {
+                                Ok(Value::NativeMethod(NativeMethod::ListSort(list)))
                             },
                             unknown => {
                                 let err = RuntimeError::new(
@@ -714,10 +747,50 @@ impl Interpreter {
         Ok(())
     }
 
+    fn check_list_index(&self, arg: Value, len: usize, ctx: &Token) -> Result<usize, RuntimeOutcome> {
+        let len = len as f64;
+
+        let index = match arg {
+            Value::Num(num) => {
+                if num.fract() != 0.0 {
+                    let err = RuntimeError::new(
+                        "index must be an integer".to_owned(),
+                        ctx.clone(),
+                    );
+                    return Err(RuntimeOutcome::Error(err));
+                }
+                else if num >= 0.0 && num < len {
+                    num as usize
+                }
+                else if num < 0.0 && -num <= len {
+                    (len + num) as usize
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("out of bounds: index was {num}, but length is {len}"),
+                        ctx.clone(),
+                    );
+                    return Err(RuntimeOutcome::Error(err));
+                }
+            },
+            _ => {
+                let type_ = arg.get_type();
+
+                let err = RuntimeError::new(
+                    format!("cannot index list with a value of type {type_}"),
+                    ctx.clone(),
+                );
+                return Err(RuntimeOutcome::Error(err));
+            },
+        };
+
+        Ok(index)
+    }
+
     fn call_native_fun(&mut self, native_fun: NativeFun, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {
         match native_fun {
             NativeFun::Println => {
-                let arg = args.into_iter().next().unwrap();
+                let arg = args.into_iter().nth(0).unwrap();
                 println!("{arg}");
                 Ok(Value::Nil)
             },
@@ -744,6 +817,40 @@ impl Interpreter {
         match native_method {
             NativeMethod::StrLength(string) => {
                 Ok(Value::Num(string.len() as f64))
+            },
+            NativeMethod::ListLength(list) => {
+                Ok(Value::Num(list.borrow().len() as f64))
+            },
+            NativeMethod::ListGet(list) => {
+                let arg = args.into_iter().nth(0).unwrap();
+                let index = self.check_list_index(arg, list.borrow().len(), &ctx)?;
+
+                let elem = list.borrow()
+                    .get(index)
+                    .unwrap()
+                    .clone();
+
+                Ok(elem)
+            },
+            NativeMethod::ListSet(list) => {
+                let mut args = args.into_iter();
+
+                let index = self.check_list_index(args.next().unwrap(), list.borrow().len(), &ctx)?;
+                let value = args.next().unwrap();
+
+                list.borrow_mut()
+                    .get_mut(index)
+                    .map(|entry| *entry = value)
+                    .unwrap();
+
+                Ok(Value::Nil)
+            },
+            NativeMethod::ListClone(list) => {
+                let clone = Vec::clone(&*list.borrow());
+                Ok(Value::List(clone.to_rc_cell()))
+            },
+            NativeMethod::ListSort(list) => {
+                unimplemented!()
             },
         }
     }
