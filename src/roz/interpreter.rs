@@ -4,7 +4,7 @@ pub use environment::Environment;
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use super::expr::value::{Class, Fun, Instance, NativeFun};
+use super::expr::value::{Class, Fun, Instance, NativeFun, NativeMethod};
 use super::expr::{Expr, Value};
 use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Op, Token, TokenKind};
@@ -562,6 +562,20 @@ impl Interpreter {
                         let val = Instance::access(instance, property)?;
                         Ok(val)
                     },
+                    Value::Str(string) => {
+                        match property.extract_ident() {
+                            "length" => {
+                                Ok(Value::NativeMethod(NativeMethod::StrLength(string)))
+                            },
+                            unknown => {
+                                let err = RuntimeError::new(
+                                    format!("property '{unknown}' not found on type"),
+                                    property,
+                                );
+                                Err(RuntimeOutcome::Error(err))
+                            },
+                        }
+                    },
                     _ => {
                         let type_ = source.get_type();
 
@@ -647,7 +661,12 @@ impl Interpreter {
             Value::NativeFun(native_fun) => {
                 self.check_arity(&args, native_fun.arity(), &ctx)?;
 
-                Ok(self.call_native_fun(native_fun, args, ctx)?)
+                self.call_native_fun(native_fun, args, ctx)
+            },
+            Value::NativeMethod(native_method) => {
+                self.check_arity(&args, native_method.arity(), &ctx)?;
+
+                self.call_native_method(native_method, args, ctx)
             },
             Value::Class(mut class) => {
                 // Create an empty instance.
@@ -717,6 +736,14 @@ impl Interpreter {
                     .as_millis();
 
                 Ok(Value::Num((elapsed as f64) / 1000.0))
+            },
+        }
+    }
+
+    fn call_native_method(&mut self, native_method: NativeMethod, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {
+        match native_method {
+            NativeMethod::StrLength(string) => {
+                Ok(Value::Num(string.len() as f64))
             },
         }
     }

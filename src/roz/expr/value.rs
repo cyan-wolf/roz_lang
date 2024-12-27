@@ -15,6 +15,7 @@ pub enum Value {
     Str(String),
     Bool(bool),
     NativeFun(NativeFun),
+    NativeMethod(NativeMethod),
     Fun(Fun),
     Class(Class),
     Instance(RcCell<Instance>),
@@ -29,11 +30,12 @@ impl Value {
             Value::Str(_) => "<string>".to_owned(),
             Value::Bool(_) => "<boolean>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
+            Value::NativeMethod(_) => "<native method>".to_owned(),
             Value::Fun(..) => "<fun>".to_owned(),
             Value::Class(..) => "<class>".to_owned(),
             Value::Instance(instance) => {
                 format!(
-                    "<instanceof {class_name}>",
+                    "<instance of {class_name}>",
                     class_name = &instance.borrow().class().name,
                 )
             },
@@ -78,6 +80,9 @@ impl Display for Value {
             Value::NativeFun(native_fun) => {
                 write!(f, "{{native function {native_fun}}}")
             },
+            Value::NativeMethod(native_method) => {
+                write!(f, "{{native method {native_method}}}")
+            },
             Value::Fun(Fun { name, .. }) => {
                 if let Some(name) = name {
                     write!(f, "{{function {name}}}")
@@ -117,8 +122,29 @@ impl NativeFun {
 impl Display for NativeFun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NativeFun::Println => write!(f, "println"),
-            NativeFun::Clock => write!(f, "clock"),
+            Self::Println => write!(f, "println"),
+            Self::Clock => write!(f, "clock"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum NativeMethod {
+    StrLength(String),
+}
+
+impl NativeMethod {
+    pub fn arity(&self) -> usize {
+        match self {
+            Self::StrLength(..) => 0,
+        }
+    }
+}
+
+impl Display for NativeMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::StrLength(..) => write!(f, "length"),
         }
     }
 }
