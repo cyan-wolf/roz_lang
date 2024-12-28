@@ -600,6 +600,12 @@ impl Interpreter {
                             "sort" => {
                                 Ok(Value::NativeMethod(NativeMethod::ListSort(list)))
                             },
+                            "push" => {
+                                Ok(Value::NativeMethod(NativeMethod::ListPush(list)))
+                            },
+                            "pop" => {
+                                Ok(Value::NativeMethod(NativeMethod::ListPop(list)))
+                            },
                             unknown => {
                                 let err = RuntimeError::new(
                                     format!("property '{unknown}' not found on type"),
@@ -791,7 +797,16 @@ impl Interpreter {
         match native_fun {
             NativeFun::Println => {
                 let arg = args.into_iter().nth(0).unwrap();
-                println!("{arg}");
+
+                match arg {
+                    // Special-case string printing to remove the quotes.
+                    Value::Str(string) => {
+                        println!("{string}");
+                    },
+                    _ => {
+                        println!("{arg}");
+                    },
+                }
                 Ok(Value::Nil)
             },
             NativeFun::Clock => {
@@ -874,6 +889,23 @@ impl Interpreter {
                 }
 
                 Ok(Value::Nil)
+            },
+            NativeMethod::ListPush(list) => {
+                let elem = args.into_iter().nth(0).unwrap();
+                list.borrow_mut().push(elem);
+                Ok(Value::List(list))
+            },
+            NativeMethod::ListPop(list) => {
+                list
+                    .borrow_mut()
+                    .pop()
+                    .ok_or_else(|| {
+                        let err = RuntimeError::new(
+                            "empty list".to_owned(),
+                            ctx,
+                        );
+                        RuntimeOutcome::Error(err)
+                    })
             },
         }
     }

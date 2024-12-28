@@ -104,7 +104,7 @@ impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {
             Value::Num(num) => write!(f, "{num}"),
-            Value::Str(str) => write!(f, "{str}"),
+            Value::Str(str) => write!(f, "\"{str}\""),
             Value::Bool(bool) => write!(f, "{bool}"),
             Value::List(elements) => {
                 write!(f, "[")?;
@@ -178,6 +178,8 @@ pub enum NativeMethod {
     ListSet(RcCell<Vec<Value>>),
     ListClone(RcCell<Vec<Value>>),
     ListSort(RcCell<Vec<Value>>),
+    ListPush(RcCell<Vec<Value>>),
+    ListPop(RcCell<Vec<Value>>),
 }
 
 impl NativeMethod {
@@ -189,6 +191,8 @@ impl NativeMethod {
             Self::ListSet(..) => 2,
             Self::ListClone(..) => 0,
             Self::ListSort(..) => 0,
+            Self::ListPush(..) => 1,
+            Self::ListPop(..) => 0,
         }
     }
 }
@@ -202,6 +206,8 @@ impl Display for NativeMethod {
             Self::ListSet(..) => write!(f, "set"),
             Self::ListClone(..) => write!(f, "clone"),
             Self::ListSort(..) => write!(f, "sort"),
+            Self::ListPush(..) => write!(f, "push"),
+            Self::ListPop(..) => write!(f, "pop"),
         }
     }
 }
