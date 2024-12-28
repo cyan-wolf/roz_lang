@@ -89,6 +89,17 @@ impl PartialEq for Value {
     }
 }
 
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        // Only numbers and strings can be compared.
+        match (self, other) {
+            (Self::Num(a), Self::Num(b)) => a.partial_cmp(b),
+            (Self::Str(a), Self::Str(b)) => a.partial_cmp(b),
+            _ => None,
+        }
+    }
+}
+
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {

@@ -850,7 +850,30 @@ impl Interpreter {
                 Ok(Value::List(clone.to_rc_cell()))
             },
             NativeMethod::ListSort(list) => {
-                unimplemented!()
+                // Flag to detect if `Value::partial_cmp` ever returns `None`.
+                // This means that two values weren't comparable and the sort 
+                // was invalid.
+                let mut invalid_sort = false;
+
+                list
+                    .borrow_mut()
+                    .sort_by(|a, b| {
+                        a.partial_cmp(b)
+                            .unwrap_or_else(|| {
+                                invalid_sort = true;
+                                std::cmp::Ordering::Equal
+                            })
+                    });
+
+                if invalid_sort {
+                    let err = RuntimeError::new(
+                        format!("not all items in the list are comparable"),
+                        ctx,
+                    );
+                    return Err(RuntimeOutcome::Error(err));
+                }
+
+                Ok(Value::Nil)
             },
         }
     }
