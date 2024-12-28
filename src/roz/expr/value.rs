@@ -52,32 +52,38 @@ impl Value {
             _ => true,
         }
     }
+}
 
-    /// Compares two objects for general equality.
-    /// Two values are equal if their type and contents are the same.
-    /// Note: User defined functions cannot be compared, comparisons 
-    /// between them are always false.
-    pub fn equals(&self, other: &Self) -> bool {
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Value::Num(a), Value::Num(b)) => a == b,
-            (Value::Str(a), Value::Str(b)) => a == b,
-            (Value::Bool(a), Value::Bool(b)) => a == b,
-            (Value::List(a), Value::List(b)) => {
-                if a.borrow().len() != b.borrow().len() {
-                    return false;
-                }
-                let contents_are_equal = a.borrow().iter()
-                    .zip(b.borrow().iter())
-                    .all(|(elem_a, elem_b)| elem_a.equals(elem_b));
-
-                contents_are_equal
+            (Self::Num(a), Self::Num(b)) => a == b,
+            (Self::Str(a), Self::Str(b)) => a == b,
+            (Self::Bool(a), Self::Bool(b)) => a == b,
+            (Self::List(a), Self::List(b)) => {
+                // Two lists are equal if their contents are equal, 
+                // even if they point to different allocations.
+                Vec::eq(&*a.borrow(), &*b.borrow())
             },
-            (Value::NativeFun(a), Value::NativeFun(b)) => a == b,
-            (Value::Instance(inst1), Value::Instance(inst2)) => {
+            (Self::NativeFun(a), Self::NativeFun(b)) => a == b,
+            (Self::NativeMethod(_a), Self::NativeMethod(_b)) => {
+                // Native methods do not work with equality since, in general,
+                // different methods could be bound to different values.
+                false
+            },
+            (Self::Fun(_a), Self::Fun(_b)) => {
+                // Functions do not work with equality.
+                false
+            },
+            (Self::Class(_a), Self::Class(_b)) => {
+                // Classes do not work with equality.
+                false
+            },
+            (Self::Instance(a), Self::Instance(b)) => {
                 // Two instances are equal if they point to the same allocation.
-                Rc::ptr_eq(inst1, inst2)
+                Rc::ptr_eq(a, b)
             },
-            (Value::Nil, Value::Nil) => true,
+            (Self::Nil, Self::Nil) => true,
             _ => false,
         }
     }

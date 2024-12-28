@@ -487,13 +487,13 @@ impl Interpreter {
                         let op1 = self.evaluate(*left)?;
                         let op2 = self.evaluate(*right)?;
 
-                        Ok(Value::Bool(op1.equals(&op2)))
+                        Ok(Value::Bool(op1 == op2))
                     },
                     &TokenKind::Op(Op::BangEq) => {
                         let op1 = self.evaluate(*left)?;
                         let op2 = self.evaluate(*right)?;
 
-                        Ok(Value::Bool(!op1.equals(&op2)))
+                        Ok(Value::Bool(op1 != op2))
                     },
                     // Evaluates to the "truthy" value, if present.
                     &TokenKind::Keyword(Keyword::Or) => {
