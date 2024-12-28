@@ -1,7 +1,7 @@
 
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Effect {
     /// Used for restricting the use of `return`. 
     InFunction,
@@ -12,6 +12,7 @@ pub enum Effect {
 }
 
 /// Used for tracking any "effects" during the resolution pass.
+#[derive(Debug, Clone)]
 pub(super) struct Context(HashSet<Effect>);
 
 impl Context {
@@ -19,12 +20,14 @@ impl Context {
         Self(HashSet::new())
     }
 
-    pub(super) fn add_effect(&mut self, effect: Effect) {
+    pub (super) fn with_effect(mut self, effect: Effect) -> Self {
         self.0.insert(effect);
+        self
     }
 
-    pub(super) fn remove_effect(&mut self, effect: &Effect) {
+    pub (super) fn without_effect(mut self, effect: &Effect) -> Self {
         self.0.remove(effect);
+        self
     }
 
     pub(super) fn has_effect(&self, effect: &Effect) -> bool {

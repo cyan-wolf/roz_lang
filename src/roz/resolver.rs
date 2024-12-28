@@ -31,7 +31,7 @@ impl Resolver {
     pub fn resolve_program(mut self, statements: &mut [Stmt]) -> Result<(), RozError> {
         // Treat the entire program as if it were a block.
         // This is to account for the global scope.
-        self.resolve_scoped(statements, &mut Context::new());
+        self.resolve_scoped(statements, &Context::new());
 
         if self.errs.len() > 0 {
             return Err(RozError::Resolution(self.errs));
@@ -40,14 +40,14 @@ impl Resolver {
     }
 
     /// Resolves all the given statements without starting a new scope.
-    fn resolve_statements(&mut self, statements: &mut [Stmt], ctx: &mut Context) {
+    fn resolve_statements(&mut self, statements: &mut [Stmt], ctx: &Context) {
         for stmt in statements {
             self.resolve_stmt(stmt, ctx);
         }
     }
 
     /// Resolves a single statement and any sub-statements/expressions.
-    fn resolve_stmt(&mut self, stmt: &mut Stmt, ctx: &mut Context) {
+    fn resolve_stmt(&mut self, stmt: &mut Stmt, ctx: &Context) {
         match stmt {
             Stmt::Expr(expr) => {
                 self.resolve_expr(expr, ctx);
@@ -69,22 +69,22 @@ impl Resolver {
                 }
             },
             Stmt::While { cond, body } => {
-                ctx.add_effect(Effect::InLoop);
-                self.resolve_expr(cond, ctx);
-                self.resolve_scoped(body, ctx);
-                ctx.remove_effect(&Effect::InLoop);
+                let ctx = ctx.clone().with_effect(Effect::InLoop);
+
+                self.resolve_expr(cond, &ctx);
+                self.resolve_scoped(body, &ctx);
             },
             Stmt::For { init, cond, side_effect, body } => {
                 // A for loop creates an extra scope compared to a while loop.
                 self.begin_scope();
 
-                ctx.add_effect(Effect::InLoop);
-                self.resolve_stmt(&mut *init, ctx);
-                self.resolve_expr(cond, ctx);
-                self.resolve_expr(side_effect, ctx);
+                let ctx = ctx.clone().with_effect(Effect::InLoop);
 
-                self.resolve_scoped(body, ctx);
-                ctx.remove_effect(&Effect::InLoop);
+                self.resolve_stmt(&mut *init, &ctx);
+                self.resolve_expr(cond, &ctx);
+                self.resolve_expr(side_effect, &ctx);
+
+                self.resolve_scoped(body, &ctx);
 
                 // A for loop creates an extra scope compared to a while loop.
                 self.end_scope();
@@ -101,6 +101,8 @@ impl Resolver {
                     // Begin the additional scope that contains 'me'.
                     self.begin_scope();
 
+                    let ctx = ctx.clone().with_effect(Effect::InMethod);
+
                     // Add 'me' to the current scope.
                     self.scopes
                         .last_mut()
@@ -108,9 +110,7 @@ impl Resolver {
                         .insert("me".to_owned(), true);
 
                     // Resolve the method.
-                    ctx.add_effect(Effect::InMethod);
-                    self.resolve_fun(method_decl, ctx);
-                    ctx.remove_effect(&Effect::InMethod);
+                    self.resolve_fun(method_decl, &ctx);
 
                     // End the additional scope that contains 'me'.
                     self.end_scope();
@@ -150,7 +150,7 @@ impl Resolver {
     }
 
     /// Resolves a single expression and any sub-expressions.
-    fn resolve_expr(&mut self, expr: &mut Expr, ctx: &mut Context) {
+    fn resolve_expr(&mut self, expr: &mut Expr, ctx: &Context) {
         match expr {
             Expr::Literal(_value) => {
                 // Do nothing, since a literal value
@@ -231,7 +231,7 @@ impl Resolver {
 
     /// Same as `Resolver::resolve_stmt`, but resolves the statements 
     /// in a new scope.
-    fn resolve_scoped(&mut self, statements: &mut [Stmt], ctx: &mut Context) {
+    fn resolve_scoped(&mut self, statements: &mut [Stmt], ctx: &Context) {
         self.begin_scope();
         self.resolve_statements(statements, ctx);
         self.end_scope();
@@ -253,11 +253,14 @@ impl Resolver {
         return None; // unreachable?
     }
 
-    /// Resolve a function and any sub-statements.
-    fn resolve_fun(&mut self, fun_decl: &mut FunDecl, ctx: &mut Context) {
-        ctx.add_effect(Effect::InFunction);
-
+    /// Resolve a function/method and any sub-statements.
+    fn resolve_fun(&mut self, fun_decl: &mut FunDecl, ctx: &Context) {
         let FunDecl { ref name, ref params, body } = fun_decl;
+        
+        let ctx = ctx
+            .clone()
+            .with_effect(Effect::InFunction)
+            .without_effect(&Effect::InLoop); // functions reset the loop context
 
         self.declare(name.clone());
         self.define(name.clone());
@@ -272,10 +275,8 @@ impl Resolver {
         
         // No need to use `Resolver::resolve_block`, since we already
         // began a scope in this function (`Resolver::resolve_fun`).
-        self.resolve_statements(body, ctx);
+        self.resolve_statements(body, &ctx);
         self.end_scope();
-
-        ctx.remove_effect(&Effect::InFunction);
     }
 
     fn begin_scope(&mut self) {
