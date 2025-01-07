@@ -569,60 +569,17 @@ impl Interpreter {
                         let val = Instance::access(instance, property)?;
                         Ok(val)
                     },
-                    Value::Str(string) => {
-                        match property.extract_ident() {
-                            "length" => {
-                                Ok(Value::NativeMethod(NativeMethod::StrLength(string)))
-                            },
-                            unknown => {
-                                let err = RuntimeError::new(
-                                    format!("property '{unknown}' not found on type"),
-                                    property,
-                                );
-                                Err(RuntimeOutcome::Error(err))
-                            },
-                        }
-                    },
-                    Value::List(list) => {
-                        match property.extract_ident() {
-                            "length" => {
-                                Ok(Value::NativeMethod(NativeMethod::ListLength(list)))
-                            },
-                            "get" => {
-                                Ok(Value::NativeMethod(NativeMethod::ListGet(list)))
-                            },
-                            "set" => {
-                                Ok(Value::NativeMethod(NativeMethod::ListSet(list)))
-                            },
-                            "clone" => {
-                                Ok(Value::NativeMethod(NativeMethod::ListClone(list)))
-                            },
-                            "sort" => {
-                                Ok(Value::NativeMethod(NativeMethod::ListSort(list)))
-                            },
-                            "push" => {
-                                Ok(Value::NativeMethod(NativeMethod::ListPush(list)))
-                            },
-                            "pop" => {
-                                Ok(Value::NativeMethod(NativeMethod::ListPop(list)))
-                            },
-                            unknown => {
-                                let err = RuntimeError::new(
-                                    format!("property '{unknown}' not found on type"),
-                                    property,
-                                );
-                                Err(RuntimeOutcome::Error(err))
-                            },
-                        }
-                    },
                     _ => {
                         let type_ = source.get_type();
 
-                        let err = RuntimeError::new(
-                            format!("value of type {type_} cannot be accessed"),
-                            property,
-                        );
-                        Err(RuntimeOutcome::Error(err))
+                        self.find_builtin_property(source, &property)
+                            .ok_or_else(|| {
+                                let err = RuntimeError::new(
+                                    format!("property '{property}' not found on type {type_}"),
+                                    property,
+                                );
+                                RuntimeOutcome::Error(err)
+                            })
                     },
                 }
             },
@@ -652,6 +609,55 @@ impl Interpreter {
                 unreachable!("unexpected error: unresolved keyword 'me'")
             },
         }
+    }
+
+    /// Tries to find the given property on a built-in type. Returns `None` if not found.
+    fn find_builtin_property(&mut self, value: Value, property: &Token) -> Option<Value> {
+        let method = match value {
+            Value::Str(string) => {
+                match property.extract_ident() {
+                    "length" => {
+                        Value::NativeMethod(NativeMethod::StrLength(string))
+                    },
+                    _ => {
+                        return None;
+                    },
+                }
+            },
+            Value::List(list) => {
+                match property.extract_ident() {
+                    "length" => {
+                        Value::NativeMethod(NativeMethod::ListLength(list))
+                    },
+                    "get" => {
+                        Value::NativeMethod(NativeMethod::ListGet(list))
+                    },
+                    "set" => {
+                        Value::NativeMethod(NativeMethod::ListSet(list))
+                    },
+                    "clone" => {
+                        Value::NativeMethod(NativeMethod::ListClone(list))
+                    },
+                    "sort" => {
+                        Value::NativeMethod(NativeMethod::ListSort(list))
+                    },
+                    "push" => {
+                        Value::NativeMethod(NativeMethod::ListPush(list))
+                    },
+                    "pop" => {
+                        Value::NativeMethod(NativeMethod::ListPop(list))
+                    },
+                    _ => {
+                        return None;
+                    },
+                }
+            },
+            _ => {
+                return None;
+            },
+        };
+
+        Some(method)
     }
 
     fn find_actual_env(&self, jumps: Option<usize>) -> RcCell<Environment> {
