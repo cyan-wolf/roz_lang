@@ -20,6 +20,7 @@ pub enum Value {
     Fun(Fun),
     Class(Class),
     Instance(RcCell<Instance>),
+    Namespace(String),
     Nil,
 }
 
@@ -41,6 +42,7 @@ impl Value {
                     class_name = &instance.borrow().class().name,
                 )
             },
+            Value::Namespace(..) => "<namespace>".to_owned(),
             Value::Nil => "<nil>".to_owned(),
         }
     }
@@ -141,6 +143,7 @@ impl Display for Value {
 
                 write!(f, "{{instance of {class_name}}}")
             },
+            Value::Namespace(name) => write!(f, "{{namespace {name}}}"),
             Value::Nil => write!(f, "nil"),
         }
     }
@@ -150,13 +153,41 @@ impl Display for Value {
 pub enum NativeFun {
     Println,
     Clock,
+    ToString,
+    // IO functions.
+    IOReadLines,
+    IOReadString,
+    IOWriteLines,
+    IOWriteString,
+    IOExists,
+    IOMakeDir,
+    // Math functions.
+    MathPow,
+    MathSqrt,
+    MathSin,
+    MathCos,
+    MathTan,
 }
 
 impl NativeFun {
     pub fn arity(&self) -> usize {
         match self {
-            Self::Println => 1,
-            Self::Clock => 0,
+            NativeFun::Println => 1,
+            NativeFun::Clock => 0,
+            NativeFun::ToString => 1,
+            // IO functions.
+            NativeFun::IOReadLines => 1,
+            NativeFun::IOReadString => 1,
+            NativeFun::IOWriteLines => 2,
+            NativeFun::IOWriteString => 2,
+            NativeFun::IOExists => 1,
+            NativeFun::IOMakeDir => 1,
+            // Math functions.
+            NativeFun::MathPow => 2,
+            NativeFun::MathSqrt => 1,
+            NativeFun::MathSin => 1,
+            NativeFun::MathCos => 1,
+            NativeFun::MathTan => 1,
         }
     }
 }
@@ -164,15 +195,31 @@ impl NativeFun {
 impl Display for NativeFun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Println => write!(f, "println"),
-            Self::Clock => write!(f, "clock"),
+            NativeFun::Println => write!(f, "println"),
+            NativeFun::Clock => write!(f, "clock"),
+            NativeFun::ToString => write!(f, "toString"),
+            // IO functions.
+            NativeFun::IOReadLines => write!(f, "readLines"),
+            NativeFun::IOReadString => write!(f, "readString"),
+            NativeFun::IOWriteLines => write!(f, "writeLines"),
+            NativeFun::IOWriteString => write!(f, "writeString"),
+            NativeFun::IOExists => write!(f, "exists"),
+            NativeFun::IOMakeDir => write!(f, "makeDir"),
+            // Math functions.
+            NativeFun::MathPow => write!(f, "pow"),
+            NativeFun::MathSqrt => write!(f, "sqrt"),
+            NativeFun::MathSin => write!(f, "sin"),
+            NativeFun::MathCos => write!(f, "cos"),
+            NativeFun::MathTan => write!(f, "tan"),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum NativeMethod {
+    // String methods.
     StrLength(String),
+    // List methods.
     ListLength(RcCell<Vec<Value>>),
     ListGet(RcCell<Vec<Value>>),
     ListSet(RcCell<Vec<Value>>),
@@ -185,7 +232,9 @@ pub enum NativeMethod {
 impl NativeMethod {
     pub fn arity(&self) -> usize {
         match self {
+            // String methods.
             Self::StrLength(..) => 0,
+            // List methods.
             Self::ListLength(..) => 0,
             Self::ListGet(..) => 1,
             Self::ListSet(..) => 2,

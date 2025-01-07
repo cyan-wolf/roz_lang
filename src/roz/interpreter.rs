@@ -2,7 +2,9 @@ pub mod environment;
 
 pub use environment::Environment;
 
+use core::f64;
 use std::collections::HashMap;
+use std::io::{BufRead, BufWriter};
 use std::rc::Rc;
 use super::expr::value::{Class, Fun, Instance, NativeFun, NativeMethod};
 use super::expr::{Expr, Value};
@@ -652,6 +654,34 @@ impl Interpreter {
                     },
                 }
             },
+            Value::Namespace(name) => {
+                match &*name {
+                    "io" => {
+                        match property.extract_ident() {
+                            "readLines" => Value::NativeFun(NativeFun::IOReadLines),
+                            "readString" => Value::NativeFun(NativeFun::IOReadString),
+                            "writeLines" => Value::NativeFun(NativeFun::IOWriteLines),
+                            "writeString" => Value::NativeFun(NativeFun::IOWriteString),
+                            "makeDir" => Value::NativeFun(NativeFun::IOMakeDir),
+                            "exists" => Value::NativeFun(NativeFun::IOExists),
+                            _ => return None,
+                        }
+                    },
+                    "math" => {
+                        match property.extract_ident() {
+                            "sin" => Value::NativeFun(NativeFun::MathSin),
+                            "cos" => Value::NativeFun(NativeFun::MathCos),
+                            "tan" => Value::NativeFun(NativeFun::MathTan),
+                            "pow" => Value::NativeFun(NativeFun::MathPow),
+                            "sqrt" => Value::NativeFun(NativeFun::MathSqrt),
+                            "pi" => Value::Num(f64::consts::PI),
+                            "e" => Value::Num(f64::consts::E),
+                            _ => return None,
+                        }
+                    },
+                    _ => return None,
+                }
+            },
             _ => {
                 return None;
             },
@@ -800,19 +830,20 @@ impl Interpreter {
     }
 
     fn call_native_fun(&mut self, native_fun: NativeFun, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {
+        use std::fs::{self, File};
+        use std::io::BufReader;
+        use std::io::Write as _;
+
         match native_fun {
             NativeFun::Println => {
                 let arg = args.into_iter().nth(0).unwrap();
 
                 match arg {
-                    // Special-case string printing to remove the quotes.
-                    Value::Str(string) => {
-                        println!("{string}");
-                    },
-                    _ => {
-                        println!("{arg}");
-                    },
-                }
+                    // Special-case string formatting to remove the quotes.
+                    Value::Str(string) => println!("{string}"),
+                    _ => println!("{arg}"),
+                };
+
                 Ok(Value::Nil)
             },
             NativeFun::Clock => {
@@ -830,6 +861,250 @@ impl Interpreter {
                     .as_millis();
 
                 Ok(Value::Num((elapsed as f64) / 1000.0))
+            },
+            NativeFun::ToString => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                let string = match arg {
+                    // Special-case string formatting to remove the quotes.
+                    Value::Str(string) => string,
+                    _ => format!("{arg}"),
+                };
+                Ok(Value::Str(string))
+            },
+            NativeFun::IOReadLines => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(path) = arg {
+                    File::open(path)
+                        // Read the lines from the file.
+                        .map(|f| {
+                            let reader = BufReader::new(f);
+
+                            // Map the individual lines from `String` -> `Value::Str`.
+                            reader
+                                .lines()
+                                .map(|l| Value::Str(l.unwrap()))
+                                .collect::<Vec<_>>()
+                        })
+                        // Convert the lines `Vec<_>` into a `Value::List`.
+                        .map(|lines| Value::List(lines.to_rc_cell()))
+                        .map_err(|io_err| {
+                            let err = RuntimeError::new(
+                                format!("{io_err}"),
+                                ctx,
+                            );
+                            RuntimeOutcome::Error(err)
+                        })
+                } 
+                else {
+                    let type_ = arg.get_type();
+                    let err = RuntimeError::new(
+                        format!("path must be a string, was of type {type_}"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::IOReadString => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(path) = arg {
+                    fs::read_to_string(path)
+                        .map(Value::Str)
+                        .map_err(|io_err| {
+                            let err = RuntimeError::new(
+                                format!("{io_err}"),
+                                ctx,
+                            );
+                            RuntimeOutcome::Error(err)
+                        })
+                } 
+                else {
+                    let type_ = arg.get_type();
+                    let err = RuntimeError::new(
+                        format!("path must be a string, was of type {type_}"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::IOWriteLines => {
+                let mut args = args.into_iter();
+                let arg1 = args.next().unwrap();
+                let arg2 = args.next().unwrap();
+
+                if let (Value::Str(path), Value::List(lines)) = (arg1, arg2) {
+                    File::create(path)
+                        .and_then(|f| {
+                            let mut writer = BufWriter::new(f);
+
+                            // Write each line to the file.
+                            // Special-case string formatting to remove the quotes.
+                            for val in lines.borrow().iter() {
+                                match val {
+                                    Value::Str(line) => writeln!(writer, "{line}")?,
+                                    _ => writeln!(writer, "{val}")?,
+                                };
+                            }
+                            Ok(())
+                        })
+                        .map(|_| Value::Nil)
+                        .map_err(|io_err| {
+                            let err = RuntimeError::new(
+                                format!("{io_err}"),
+                                ctx,
+                            );
+                            RuntimeOutcome::Error(err)
+                        })
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("first argument must be a string, second argument must be a list"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::IOWriteString => {
+                let mut args = args.into_iter();
+                let arg1 = args.next().unwrap();
+                let arg2 = args.next().unwrap();
+
+                if let (Value::Str(path), Value::Str(content)) = (arg1, arg2) {
+                    fs::write(path, content)
+                        .map(|_| Value::Nil)
+                        .map_err(|io_err| {
+                            let err = RuntimeError::new(
+                                format!("{io_err}"),
+                                ctx,
+                            );
+                            RuntimeOutcome::Error(err)
+                        })
+                } 
+                else {
+                    let err = RuntimeError::new(
+                        format!("arguments must be strings"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::IOExists => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(path) = arg {
+                    fs::exists(path)
+                        .map(Value::Bool)
+                        .map_err(|io_err| {
+                            let err = RuntimeError::new(
+                                format!("{io_err}"),
+                                ctx,
+                            );
+                            RuntimeOutcome::Error(err)
+                        })
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a string"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::IOMakeDir => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(path) = arg {
+                    fs::create_dir(path)
+                        .map(|_| Value::Nil)
+                        .map_err(|io_err| {
+                            let err = RuntimeError::new(
+                                format!("{io_err}"),
+                                ctx,
+                            );
+                            RuntimeOutcome::Error(err)
+                        })
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a string"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathPow => {
+                let mut args = args.into_iter();
+                let arg1 = args.next().unwrap();
+                let arg2 = args.next().unwrap();
+
+                if let (Value::Num(base), Value::Num(exp)) = (arg1, arg2) {
+                    Ok(Value::Num(base.powf(exp)))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("arguments must be numbers"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathSqrt => {
+                let arg = args.into_iter().next().unwrap();
+
+                if let Value::Num(num) = arg {
+                    Ok(Value::Num(num.sqrt()))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a number"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathSin => {
+                let arg = args.into_iter().next().unwrap();
+
+                if let Value::Num(num) = arg {
+                    Ok(Value::Num(num.sin()))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a number"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathCos => {
+                let arg = args.into_iter().next().unwrap();
+
+                if let Value::Num(num) = arg {
+                    Ok(Value::Num(num.cos()))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a number"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathTan => {
+                let arg = args.into_iter().next().unwrap();
+
+                if let Value::Num(num) = arg {
+                    Ok(Value::Num(num.tan()))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a number"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
             },
         }
     }
@@ -927,6 +1202,7 @@ impl Interpreter {
     fn globals() -> Environment {
         let mut globals = Environment::new();
 
+        // Global functions.
         globals.define(
             "println".to_owned(), 
             Value::NativeFun(NativeFun::Println),
@@ -934,6 +1210,19 @@ impl Interpreter {
         globals.define(
             "clock".to_owned(), 
             Value::NativeFun(NativeFun::Clock),
+        );
+        globals.define(
+            "toString".to_owned(),
+            Value::NativeFun(NativeFun::ToString),
+        );
+        // Namespaces.
+        globals.define(
+            "io".to_owned(),
+            Value::Namespace("io".to_owned()),
+        );
+        globals.define(
+            "math".to_owned(),
+            Value::Namespace("math".to_owned()),
         );
 
         globals
