@@ -618,9 +618,7 @@ impl Interpreter {
         let method = match value {
             Value::Str(string) => {
                 match property.extract_ident() {
-                    "length" => {
-                        Value::NativeMethod(NativeMethod::StrLength(string))
-                    },
+                    "length" => Value::NativeMethod(NativeMethod::StrLength(string)),
                     _ => {
                         return None;
                     },
@@ -628,30 +626,14 @@ impl Interpreter {
             },
             Value::List(list) => {
                 match property.extract_ident() {
-                    "length" => {
-                        Value::NativeMethod(NativeMethod::ListLength(list))
-                    },
-                    "get" => {
-                        Value::NativeMethod(NativeMethod::ListGet(list))
-                    },
-                    "set" => {
-                        Value::NativeMethod(NativeMethod::ListSet(list))
-                    },
-                    "clone" => {
-                        Value::NativeMethod(NativeMethod::ListClone(list))
-                    },
-                    "sort" => {
-                        Value::NativeMethod(NativeMethod::ListSort(list))
-                    },
-                    "push" => {
-                        Value::NativeMethod(NativeMethod::ListPush(list))
-                    },
-                    "pop" => {
-                        Value::NativeMethod(NativeMethod::ListPop(list))
-                    },
-                    _ => {
-                        return None;
-                    },
+                    "length" => Value::NativeMethod(NativeMethod::ListLength(list)),
+                    "get" => Value::NativeMethod(NativeMethod::ListGet(list)),
+                    "set" => Value::NativeMethod(NativeMethod::ListSet(list)),
+                    "clone" => Value::NativeMethod(NativeMethod::ListClone(list)),
+                    "sort" => Value::NativeMethod(NativeMethod::ListSort(list)),
+                    "push" => Value::NativeMethod(NativeMethod::ListPush(list)),
+                    "pop" => Value::NativeMethod(NativeMethod::ListPop(list)),
+                    _ => return None,
                 }
             },
             Value::Namespace(name) => {
