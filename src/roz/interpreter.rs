@@ -854,6 +854,9 @@ impl Interpreter {
                 };
                 Ok(Value::Str(string))
             },
+            NativeFun::Map => {
+                Ok(Value::Map(HashMap::new().to_rc_cell()))
+            },
             NativeFun::IOReadLines => {
                 let arg = args.into_iter().nth(0).unwrap();
 
@@ -1196,6 +1199,10 @@ impl Interpreter {
         globals.define(
             "toString".to_owned(),
             Value::NativeFun(NativeFun::ToString),
+        );
+        globals.define(
+            "Map".to_owned(),
+            Value::NativeFun(NativeFun::Map),
         );
         // Namespaces.
         globals.define(

@@ -4,6 +4,7 @@ mod fun;
 pub use fun::Fun;
 pub use class::{Class, Instance};
 
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::rc::Rc;
 
@@ -15,6 +16,7 @@ pub enum Value {
     Str(String),
     Bool(bool),
     List(RcCell<Vec<Value>>),
+    Map(RcCell<HashMap<String, Value>>),
     NativeFun(NativeFun),
     NativeMethod(NativeMethod),
     Fun(Fun),
@@ -32,6 +34,7 @@ impl Value {
             Value::Str(_) => "<string>".to_owned(),
             Value::Bool(_) => "<boolean>".to_owned(),
             Value::List(_) => "<list>".to_owned(),
+            Value::Map(_) => "<map>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
             Value::NativeMethod(_) => "<native method>".to_owned(),
             Value::Fun(..) => "<fun>".to_owned(),
@@ -121,6 +124,21 @@ impl Display for Value {
                 }
                 write!(f, "]")
             },
+            Value::Map(map) => {
+                write!(f, "{{")?;
+
+                let mut pairs_left = map.borrow().len();
+
+                for (k, v) in &*map.borrow() {
+                    write!(f, "{k} => {v}")?;
+
+                    if pairs_left > 1 {
+                        write!(f, ", ")?;
+                    }
+                    pairs_left -= 1;
+                }
+                write!(f, "}}")
+            },
             Value::NativeFun(native_fun) => {
                 write!(f, "{{native function {native_fun}}}")
             },
@@ -154,6 +172,7 @@ pub enum NativeFun {
     Println,
     Clock,
     ToString,
+    Map,
     // IO functions.
     IOReadLines,
     IOReadString,
@@ -175,6 +194,7 @@ impl NativeFun {
             NativeFun::Println => 1,
             NativeFun::Clock => 0,
             NativeFun::ToString => 1,
+            NativeFun::Map => 0,
             // IO functions.
             NativeFun::IOReadLines => 1,
             NativeFun::IOReadString => 1,
@@ -198,6 +218,7 @@ impl Display for NativeFun {
             NativeFun::Println => write!(f, "println"),
             NativeFun::Clock => write!(f, "clock"),
             NativeFun::ToString => write!(f, "toString"),
+            NativeFun::Map => write!(f, "Map"),
             // IO functions.
             NativeFun::IOReadLines => write!(f, "readLines"),
             NativeFun::IOReadString => write!(f, "readString"),

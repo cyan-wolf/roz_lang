@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use super::{expr::{value::Instance, Expr, Value}, interpreter::Environment, stmt::Stmt};
 
@@ -47,3 +47,4 @@ macro_rules! impl_to_rc_cell {
 impl_to_rc_cell!(Environment);
 impl_to_rc_cell!(Instance);
 impl_to_rc_cell!(Vec<Value>);
+impl_to_rc_cell!(HashMap<String, Value>);
