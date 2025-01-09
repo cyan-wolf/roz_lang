@@ -93,6 +93,9 @@ pub enum Keyword {
     Break,
     Continue,
     Me,
+    Try,
+    Catch,
+    Finally,
 }
 
 impl Display for Op {
@@ -158,6 +161,9 @@ impl Display for Keyword {
             Keyword::Break => "break",
             Keyword::Continue => "continue",
             Keyword::Me => "me",
+            Keyword::Try => "try",
+            Keyword::Catch => "catch",
+            Keyword::Finally => "finally",
         };
 
         write!(f, "{str}")

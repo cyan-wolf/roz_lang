@@ -269,6 +269,9 @@ impl Scanner {
             "break" => Keyword::Break,
             "continue" => Keyword::Continue,
             "me" => Keyword::Me,
+            "try" => Keyword::Try,
+            "catch" => Keyword::Catch,
+            "finally" => Keyword::Finally,
             _ => return None,
         };
 

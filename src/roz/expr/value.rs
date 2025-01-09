@@ -17,6 +17,7 @@ pub enum Value {
     Bool(bool),
     List(RcCell<Vec<Value>>),
     Map(RcCell<HashMap<String, Value>>),
+    Error(String),
     NativeFun(NativeFun),
     NativeMethod(NativeMethod),
     Fun(Fun),
@@ -35,6 +36,7 @@ impl Value {
             Value::Bool(_) => "<boolean>".to_owned(),
             Value::List(_) => "<list>".to_owned(),
             Value::Map(_) => "<map>".to_owned(),
+            Value::Error(_) => "<error>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
             Value::NativeMethod(_) => "<native method>".to_owned(),
             Value::Fun(..) => "<fun>".to_owned(),
@@ -144,6 +146,9 @@ impl Display for Value {
                 }
                 write!(f, "}}")
             },
+            Value::Error(err_message) => {
+                write!(f, "{err_message}")
+            }
             Value::NativeFun(native_fun) => {
                 write!(f, "{{native function {native_fun}}}")
             },

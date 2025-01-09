@@ -89,6 +89,26 @@ impl Resolver {
                 // A for loop creates an extra scope compared to a while loop.
                 self.end_scope();
             },
+            Stmt::Try { try_branch, catch_branch, finally_branch } => {
+                self.resolve_scoped(try_branch, ctx);
+
+                if let Some((error_name, catch_branch)) = catch_branch {
+                    self.begin_scope();
+
+                    let error_name = error_name.extract_ident().to_owned();
+                    self.declare(error_name.clone());
+                    self.define(error_name);
+
+                    // Use `Resolver::resolve_statements` since we need to 
+                    // manually define/declare the error's name.
+                    self.resolve_statements(catch_branch, ctx);
+                    self.end_scope();
+                }
+                
+                if let Some(finally_branch) = finally_branch {
+                    self.resolve_scoped(finally_branch, ctx);
+                }
+            },
             Stmt::Fun(fun_decl) => {
                 self.resolve_fun(fun_decl, ctx);
             },

@@ -128,6 +128,36 @@ impl Interpreter {
                 
                 self.execute(stmt)?;
             },
+            Stmt::Try { try_branch, catch_branch, finally_branch } => {
+                match self.execute_scoped(try_branch, self.new_env_with_enclosing()) {
+                    Err(RuntimeOutcome::Error(incoming_err)) => {
+
+                        if let Some((error_name, catch_branch)) = catch_branch {
+                            let catch_env = self.new_env_with_enclosing();
+                            catch_env.borrow_mut()
+                                .define(
+                                    error_name.extract_ident().to_owned(),
+                                    Value::Error(incoming_err.into_message()),
+                                );
+
+                            let outcome_catch = self.execute_scoped(catch_branch, catch_env);
+                            // Execute the finally branch just before diverging due to the catch block finishing.
+                            if let Some(finally_branch) = finally_branch {
+                                self.execute_scoped(finally_branch, self.new_env_with_enclosing())?;
+                            }
+                            outcome_catch?;
+                        }
+                    },
+                    // Propogate any other outcome.
+                    outcome_try => {
+                        // Execute the finally branch just before diverging due to the try block finishing.
+                        if let Some(finally_branch) = finally_branch {
+                            self.execute_scoped(finally_branch, self.new_env_with_enclosing())?;
+                        }
+                        outcome_try?
+                    },
+                }
+            },
             Stmt::Fun(FunDecl {name, params, body}) => {
                 // Make the function object. Stores a reference to the 
                 // current environment (at definition time), which allows 

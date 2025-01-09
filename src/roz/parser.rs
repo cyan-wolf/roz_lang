@@ -66,6 +66,9 @@ impl Parser {
         else if self.match_any([TokenKind::Keyword(Keyword::For)]) {
             self.statement_for()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::Try)]) {
+            self.statement_try()
+        }
         else if self.match_any([TokenKind::Keyword(Keyword::Return)]) {
             self.statement_return()
         }
@@ -219,6 +222,61 @@ impl Parser {
             body,
         };
 
+        Ok(stmt)
+    }
+
+    fn statement_try(&mut self) -> Result<Stmt, SyntaxError> {
+        // Match a '{' before parsing the 'try' block.
+        self.try_match(
+            &TokenKind::Op(Op::LeftBrace),
+            |_| "expected '{' after 'try'".to_owned(),
+        )?;
+        let try_branch = self.statement_block()?;
+
+        let catch_branch = if self.match_any([
+            TokenKind::Keyword(Keyword::Catch),
+        ]) {
+            let catch_error_name = if let TokenKind::Literal(Literal::Ident(..)) = self.peek().kind() {
+                self.advance();
+                self.prev().clone()
+            } else {
+                let token = self.peek().clone();
+                let err = SyntaxError::new(
+                    token.line(),
+                    "expected error name".to_owned(),
+                    Some(token),
+                );
+                return Err(err);
+            };
+
+            // Match a '{' before parsing the 'catch' block.
+            self.try_match(
+                &TokenKind::Op(Op::LeftBrace),
+                |_| "expected '{' after catch".to_owned(),
+            )?;
+            let block_catch = self.statement_block()?;
+
+            Some((catch_error_name, block_catch))
+        } else {
+            None
+        };
+
+        let finally_branch = if self.match_any([
+            TokenKind::Keyword(Keyword::Finally),
+        ]) {
+            // Match a '{' before parsing the 'finally' block.
+            self.try_match(
+                &TokenKind::Op(Op::LeftBrace),
+                |_| "expected '{' after finally".to_owned(),
+            )?;
+            let block_finally = self.statement_block()?;
+
+            Some(block_finally)
+        } else {
+            None
+        };
+
+        let stmt = Stmt::Try { try_branch, catch_branch, finally_branch };
         Ok(stmt)
     }
 

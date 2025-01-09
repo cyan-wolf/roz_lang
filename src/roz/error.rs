@@ -46,6 +46,10 @@ impl RuntimeError {
             token,
         }
     }
+
+    pub fn into_message(self) -> String {
+        self.message
+    }
 }
 
 impl Display for RuntimeError {
