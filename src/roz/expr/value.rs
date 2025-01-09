@@ -191,6 +191,10 @@ pub enum NativeFun {
     MathSin,
     MathCos,
     MathTan,
+    MathLog,
+    MathRandom,
+    MathFloor,
+    MathCeil,
 }
 
 impl NativeFun {
@@ -213,6 +217,10 @@ impl NativeFun {
             NativeFun::MathSin => 1,
             NativeFun::MathCos => 1,
             NativeFun::MathTan => 1,
+            NativeFun::MathLog => 2,
+            NativeFun::MathRandom => 0,
+            NativeFun::MathFloor => 1,
+            NativeFun::MathCeil => 1,
         }
     }
 }
@@ -237,6 +245,10 @@ impl Display for NativeFun {
             NativeFun::MathSin => write!(f, "sin"),
             NativeFun::MathCos => write!(f, "cos"),
             NativeFun::MathTan => write!(f, "tan"),
+            NativeFun::MathLog => write!(f, "log"),
+            NativeFun::MathRandom => write!(f, "random"),
+            NativeFun::MathFloor => write!(f, "floor"),
+            NativeFun::MathCeil => write!(f, "ceil"),
         }
     }
 }

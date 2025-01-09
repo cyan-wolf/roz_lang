@@ -1,6 +1,7 @@
 pub mod environment;
 
 pub use environment::Environment;
+use rand::Rng;
 
 use core::f64;
 use std::collections::HashMap;
@@ -666,6 +667,10 @@ impl Interpreter {
                             "tan" => Value::NativeFun(NativeFun::MathTan),
                             "pow" => Value::NativeFun(NativeFun::MathPow),
                             "sqrt" => Value::NativeFun(NativeFun::MathSqrt),
+                            "log" => Value::NativeFun(NativeFun::MathLog),
+                            "random" => Value::NativeFun(NativeFun::MathRandom),
+                            "floor" => Value::NativeFun(NativeFun::MathFloor),
+                            "ceil" => Value::NativeFun(NativeFun::MathCeil),
                             "pi" => Value::Num(f64::consts::PI),
                             "e" => Value::Num(f64::consts::E),
                             _ => return None,
@@ -1092,6 +1097,64 @@ impl Interpreter {
 
                 if let Value::Num(num) = arg {
                     Ok(Value::Num(num.tan()))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a number"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathLog => {
+                let mut args = args.into_iter();
+                let arg1 = args.next().unwrap();
+                let arg2 = args.next().unwrap();
+
+                if let (Value::Num(num), Value::Num(base)) = (arg1, arg2) {
+                    if base == 2.0 {
+                        Ok(Value::Num(f64::log2(num)))
+                    }
+                    else if base == 10.0 {
+                        Ok(Value::Num(f64::log10(num)))
+                    }
+                    else if base == f64::consts::E {
+                        Ok(Value::Num(f64::ln(num)))
+                    }
+                    else {
+                        Ok(Value::Num(f64::log(num, base)))
+                    }
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("arguments must be numbers"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathRandom => {
+                Ok(Value::Num(rand::thread_rng().gen()))
+            },
+            NativeFun::MathFloor => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Num(num) = arg {
+                    Ok(Value::Num(f64::floor(num)))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("argument must be a number"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::MathCeil => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Num(num) = arg {
+                    Ok(Value::Num(f64::ceil(num)))
                 }
                 else {
                     let err = RuntimeError::new(
