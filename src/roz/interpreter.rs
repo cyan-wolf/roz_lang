@@ -636,6 +636,16 @@ impl Interpreter {
                     _ => return None,
                 }
             },
+            Value::Map(map) => {
+                match property.extract_ident() {
+                    "set" => Value::NativeMethod(NativeMethod::MapSet(map)),
+                    "has" => Value::NativeMethod(NativeMethod::MapHas(map)),
+                    "remove" => Value::NativeMethod(NativeMethod::MapRemove(map)),
+                    "clone" => Value::NativeMethod(NativeMethod::MapClone(map)),
+                    "keys" => Value::NativeMethod(NativeMethod::MapKeys(map)),
+                    _ => return None,
+                }
+            }
             Value::Namespace(name) => {
                 match &*name {
                     "io" => {
@@ -1172,6 +1182,65 @@ impl Interpreter {
                         );
                         RuntimeOutcome::Error(err)
                     })
+            },
+            NativeMethod::MapSet(map) => {
+                let mut args = args.into_iter();
+                let arg1 = args.next().unwrap();
+                let arg2 = args.next().unwrap();
+
+                if let Value::Str(key) = arg1 {
+                    map.borrow_mut().insert(key, arg2);
+                    Ok(Value::Map(map))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        "key must be a string".to_owned(),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeMethod::MapHas(map) => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(key) = arg {
+                    Ok(Value::Bool(map.borrow().contains_key(&key)))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        "key must be a string".to_owned(),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeMethod::MapRemove(map) => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(key) = arg {
+                    map.borrow_mut().remove(&key);
+                    Ok(Value::Map(map))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        "key must be a string".to_owned(),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeMethod::MapClone(map) => {
+                let clone = HashMap::clone(&*map.borrow());
+                Ok(Value::Map(clone.to_rc_cell()))
+            },
+            NativeMethod::MapKeys(map) => {
+                let keys: Vec<_> = map
+                    .borrow()
+                    .keys()
+                    .map(|k| Value::Str(k.to_owned()))
+                    .collect();
+                
+                Ok(Value::List(keys.to_rc_cell()))
             },
         }
     }

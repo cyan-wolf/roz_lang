@@ -70,6 +70,11 @@ impl PartialEq for Value {
                 // even if they point to different allocations.
                 Vec::eq(&*a.borrow(), &*b.borrow())
             },
+            (Self::Map(a), Self::Map(b)) => {
+                // Two maps are equal if their contents are equal,
+                // even if they point to different allocations.
+                HashMap::eq(&*a.borrow(), &*b.borrow())
+            },
             (Self::NativeFun(a), Self::NativeFun(b)) => a == b,
             (Self::NativeMethod(_a), Self::NativeMethod(_b)) => {
                 // Native methods do not work with equality since, in general,
@@ -130,7 +135,7 @@ impl Display for Value {
                 let mut pairs_left = map.borrow().len();
 
                 for (k, v) in &*map.borrow() {
-                    write!(f, "{k} => {v}")?;
+                    write!(f, "\"{k}\" => {v}")?;
 
                     if pairs_left > 1 {
                         write!(f, ", ")?;
@@ -248,21 +253,33 @@ pub enum NativeMethod {
     ListSort(RcCell<Vec<Value>>),
     ListPush(RcCell<Vec<Value>>),
     ListPop(RcCell<Vec<Value>>),
+    // Map methods.
+    MapSet(RcCell<HashMap<String, Value>>),
+    MapHas(RcCell<HashMap<String, Value>>),
+    MapRemove(RcCell<HashMap<String, Value>>),
+    MapClone(RcCell<HashMap<String, Value>>),
+    MapKeys(RcCell<HashMap<String, Value>>),
 }
 
 impl NativeMethod {
     pub fn arity(&self) -> usize {
         match self {
             // String methods.
-            Self::StrLength(..) => 0,
+            NativeMethod::StrLength(..) => 0,
             // List methods.
-            Self::ListLength(..) => 0,
-            Self::ListGet(..) => 1,
-            Self::ListSet(..) => 2,
-            Self::ListClone(..) => 0,
-            Self::ListSort(..) => 0,
-            Self::ListPush(..) => 1,
-            Self::ListPop(..) => 0,
+            NativeMethod::ListLength(..) => 0,
+            NativeMethod::ListGet(..) => 1,
+            NativeMethod::ListSet(..) => 2,
+            NativeMethod::ListClone(..) => 0,
+            NativeMethod::ListSort(..) => 0,
+            NativeMethod::ListPush(..) => 1,
+            NativeMethod::ListPop(..) => 0,
+            // Map methods.
+            NativeMethod::MapSet(..) => 2,
+            NativeMethod::MapHas(..) => 1,
+            NativeMethod::MapRemove(..) => 1,
+            NativeMethod::MapClone(..) => 0,
+            NativeMethod::MapKeys(..) => 0,
         }
     }
 }
@@ -270,14 +287,22 @@ impl NativeMethod {
 impl Display for NativeMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::StrLength(..) => write!(f, "length"),
-            Self::ListLength(..) => write!(f, "length"),
-            Self::ListGet(..) => write!(f, "get"),
-            Self::ListSet(..) => write!(f, "set"),
-            Self::ListClone(..) => write!(f, "clone"),
-            Self::ListSort(..) => write!(f, "sort"),
-            Self::ListPush(..) => write!(f, "push"),
-            Self::ListPop(..) => write!(f, "pop"),
+            // String methods.
+            NativeMethod::StrLength(..) => write!(f, "length"),
+            // List methods.
+            NativeMethod::ListLength(..) => write!(f, "length"),
+            NativeMethod::ListGet(..) => write!(f, "get"),
+            NativeMethod::ListSet(..) => write!(f, "set"),
+            NativeMethod::ListClone(..) => write!(f, "clone"),
+            NativeMethod::ListSort(..) => write!(f, "sort"),
+            NativeMethod::ListPush(..) => write!(f, "push"),
+            NativeMethod::ListPop(..) => write!(f, "pop"),
+            // Map methods.
+            NativeMethod::MapSet(..) => write!(f, "set"),
+            NativeMethod::MapHas(..) => write!(f, "has"),
+            NativeMethod::MapRemove(..) => write!(f, "remove"),
+            NativeMethod::MapClone(..) => write!(f, "clone"),
+            NativeMethod::MapKeys(..) => write!(f, "keys"),
         }
     }
 }
