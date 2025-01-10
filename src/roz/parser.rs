@@ -420,30 +420,67 @@ impl Parser {
             let equals = self.prev().clone();
             let rvalue = self.assignment()?.to_box();
 
-            // If the left hand side of the '=' was a simple variable access,
-            // then the whole expression is a simple assignment.
-            if let Expr::Var { lvalue, .. } = expr {
-                // The jumps are set later in the resolver.
-                let assign_expr = Expr::Assign { lvalue, rvalue, jumps: None };
-                Ok(assign_expr)
-            }
-            // If the left hand side of the '=' was a property access 
-            // (a "get" expression), then the whole expression is a "set" expression.
-            else if let Expr::Get { source , property } = expr {
-                let set_expr = Expr::Set { source, property, rvalue };
-                Ok(set_expr)
-            }
-            else {
-                let err = SyntaxError::new(
-                    equals.line(),
-                    "invalid assignment target".to_owned(),
-                    Some(equals),
-                );
+            self.finish_building_assignment(expr, rvalue, equals)
+        }
+        // Desugars in-place operators.
+        // Example:
+        // <lhs> *= <rhs>
+        // desugars to
+        // <lhs> = <lhs> * <rhs>
+        else if self.match_any([
+            TokenKind::Op(Op::PlusEq),
+            TokenKind::Op(Op::MinusEq),
+            TokenKind::Op(Op::StarEq),
+            TokenKind::Op(Op::SlashEq),
+        ]) {
+            let ctx_token = self.prev().clone();
 
-                Err(err)
-            }
-        } else {
+            // Transform the in-place assignment operators into their 
+            // simple forms, i.e. `+=` gets transformed into `+`.
+            let op = {
+                let kind = match ctx_token.kind() {
+                    TokenKind::Op(Op::PlusEq) => TokenKind::Op(Op::Plus),
+                    TokenKind::Op(Op::MinusEq) => TokenKind::Op(Op::Minus),
+                    TokenKind::Op(Op::StarEq) => TokenKind::Op(Op::Star),
+                    TokenKind::Op(Op::SlashEq) => TokenKind::Op(Op::Slash),
+                    _ => unreachable!(),
+                };
+                Token::new(kind, ctx_token.line())
+            };
+            // The right-hand-side (RHS) of the in-place operator.
+            let rvalue = self.assignment()?.to_box();
+            // Build a new RHS.
+            let modified_rvalue = Expr::Binary { left: expr.clone().to_box(), op, right: rvalue };
+
+            self.finish_building_assignment(expr, modified_rvalue.to_box(), ctx_token)
+        }
+        else {
             Ok(expr)
+        }
+    }
+
+    /// Helper method for `Parser::assignment` that determines the lvalue type in an assignment.
+    fn finish_building_assignment(&mut self, expr: Expr, rvalue: Box<Expr>, ctx: Token) -> Result<Expr, SyntaxError> {
+        // If the left hand side of the '=' was a simple variable access,
+        // then the whole expression is a simple assignment.
+        if let Expr::Var { lvalue, .. } = expr {
+            // The jumps are set later in the resolver.
+            let assign_expr = Expr::Assign { lvalue, rvalue, jumps: None };
+            Ok(assign_expr)
+        }
+        // If the left hand side of the '=' was a property access 
+        // (a "get" expression), then the whole expression is a "set" expression.
+        else if let Expr::Get { source , property } = expr {
+            let set_expr = Expr::Set { source, property, rvalue };
+            Ok(set_expr)
+        }
+        else {
+            let err = SyntaxError::new(
+                ctx.line(),
+                "invalid assignment target".to_owned(),
+                Some(ctx),
+            );
+            Err(err)
         }
     }
 

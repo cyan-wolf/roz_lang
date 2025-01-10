@@ -61,10 +61,31 @@ impl Scanner {
             ']' => Token::new(TokenKind::Op(Op::RightBracket), self.loc.line),
             ',' => Token::new(TokenKind::Op(Op::Comma), self.loc.line),
             '.' => Token::new(TokenKind::Op(Op::Dot), self.loc.line),
-            '-' => Token::new(TokenKind::Op(Op::Minus), self.loc.line),
-            '+' => Token::new(TokenKind::Op(Op::Plus), self.loc.line),
+            '-' => {
+                let kind = if self.match_next('=') {
+                    TokenKind::Op(Op::MinusEq)
+                } else {
+                    TokenKind::Op(Op::Minus)
+                };
+                Token::new(kind, self.loc.line)
+            },
+            '+' => {
+                let kind = if self.match_next('=') {
+                    TokenKind::Op(Op::PlusEq)
+                } else {
+                    TokenKind::Op(Op::Plus)
+                };
+                Token::new(kind, self.loc.line)
+            },
             ';' => Token::new(TokenKind::Op(Op::Semicolon), self.loc.line),
-            '*' => Token::new(TokenKind::Op(Op::Star), self.loc.line),
+            '*' => {
+                let kind = if self.match_next('=') {
+                    TokenKind::Op(Op::StarEq)
+                } else {
+                    TokenKind::Op(Op::Star)
+                };
+                Token::new(kind, self.loc.line)
+            },
             '!' => {
                 let kind = if self.match_next('=') {
                     TokenKind::Op(Op::BangEq)
@@ -103,7 +124,11 @@ impl Scanner {
                         self.advance();
                     }
                     return Ok(());
-                } else {
+                } 
+                else if self.match_next('=') {
+                    TokenKind::Op(Op::SlashEq)
+                }
+                else {
                     TokenKind::Op(Op::Slash)
                 };
 

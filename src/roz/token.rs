@@ -62,6 +62,10 @@ pub enum Op {
     GreaterEq,
     Less,
     Greater,
+    PlusEq,
+    MinusEq,
+    StarEq,
+    SlashEq,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -123,6 +127,10 @@ impl Display for Op {
             Op::GreaterEq => ">=",
             Op::Less => "<",
             Op::Greater => ">",
+            Op::PlusEq => "+=",
+            Op::MinusEq => "-=",
+            Op::StarEq => "*=",
+            Op::SlashEq => "/=",
         };
 
         write!(f, "{str}")
