@@ -1,0 +1,49 @@
+var word = "Hello";
+var fields = "John|43|Sales";
+
+println("Chars: " + word.split(nil));
+println("Fields: " + fields.split("|"));
+
+class Employee {
+    init(name, age, department) {
+        me.name = name;
+        me.age = age;
+        me.department = department;
+    }
+}
+
+fun parseFields(fields) {
+    var fieldsList = fields.split("|");
+
+    return Employee(
+        fieldsList.get(0),
+        fieldsList.get(1).parseNumber(),
+        fieldsList.get(2)
+    );
+}
+
+var emp = parseFields(fields);
+println(emp);              
+println(typeof emp);        // <instance of Employee>
+println(typeof emp.age);    // <number>
+println("");
+
+assert("ABC".isUpper());
+assert("abc".isLower());
+assertEq("ABC", "abc".toUpper());
+assertEq("abc", "ABC".toLower());
+
+try {
+    assertEq("abc", "ABC".toUpper());
+}
+catch err {
+    println("error: " + err);
+}
+println("");
+
+try {
+    var number = "not a number".parseNumber();
+}
+catch err {
+    println("error: " + err);
+}

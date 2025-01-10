@@ -1,0 +1,19 @@
+var dict = Map()
+    .set("Hello", "Hola")
+    .set("Bye", "Adios");
+
+println(dict.get("Hello"));
+println(dict.has("Hello")); // true
+println(dict.has("What"));  // false
+
+try {
+    println(dict.get("What"));   // runtime error
+}
+catch err {
+    println("error: " + err);
+}
+println("");
+
+println("Type: " + typeof dict);
+println("Keys: " + dict.keys());
+println("String representation: " + toString(dict));

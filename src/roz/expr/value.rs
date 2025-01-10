@@ -300,6 +300,7 @@ pub enum NativeMethod {
     ListPush(RcCell<Vec<Value>>),
     ListPop(RcCell<Vec<Value>>),
     // Map methods.
+    MapGet(RcCell<HashMap<String, Value>>),
     MapSet(RcCell<HashMap<String, Value>>),
     MapHas(RcCell<HashMap<String, Value>>),
     MapRemove(RcCell<HashMap<String, Value>>),
@@ -327,6 +328,7 @@ impl NativeMethod {
             NativeMethod::ListPush(..) => 1,
             NativeMethod::ListPop(..) => 0,
             // Map methods.
+            NativeMethod::MapGet(..) => 1,
             NativeMethod::MapSet(..) => 2,
             NativeMethod::MapHas(..) => 1,
             NativeMethod::MapRemove(..) => 1,
@@ -341,6 +343,12 @@ impl Display for NativeMethod {
         match self {
             // String methods.
             NativeMethod::StrLength(..) => write!(f, "length"),
+            NativeMethod::StrSplit(_) => write!(f, "split"),
+            NativeMethod::StrParseNumber(_) => write!(f, "parseNumber"),
+            NativeMethod::StrToUpper(_) => write!(f, "toUpper"),
+            NativeMethod::StrToLower(_) => write!(f, "toLower"),
+            NativeMethod::StrIsUpper(_) => write!(f, "isUpper"),
+            NativeMethod::StrIsLower(_) => write!(f, "isLower"),
             // List methods.
             NativeMethod::ListLength(..) => write!(f, "length"),
             NativeMethod::ListGet(..) => write!(f, "get"),
@@ -350,17 +358,12 @@ impl Display for NativeMethod {
             NativeMethod::ListPush(..) => write!(f, "push"),
             NativeMethod::ListPop(..) => write!(f, "pop"),
             // Map methods.
+            NativeMethod::MapGet(..) => write!(f, "get"),
             NativeMethod::MapSet(..) => write!(f, "set"),
             NativeMethod::MapHas(..) => write!(f, "has"),
             NativeMethod::MapRemove(..) => write!(f, "remove"),
             NativeMethod::MapClone(..) => write!(f, "clone"),
             NativeMethod::MapKeys(..) => write!(f, "keys"),
-            NativeMethod::StrSplit(_) => write!(f, "split"),
-            NativeMethod::StrParseNumber(_) => write!(f, "parseNumber"),
-            NativeMethod::StrToUpper(_) => write!(f, "toUpper"),
-            NativeMethod::StrToLower(_) => write!(f, "toLower"),
-            NativeMethod::StrIsUpper(_) => write!(f, "isUpper"),
-            NativeMethod::StrIsLower(_) => write!(f, "isLower"),
         }
     }
 }

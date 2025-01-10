@@ -692,6 +692,7 @@ impl Interpreter {
             },
             Value::Map(map) => {
                 match property.extract_ident() {
+                    "get" => Value::NativeMethod(NativeMethod::MapGet(map)),
                     "set" => Value::NativeMethod(NativeMethod::MapSet(map)),
                     "has" => Value::NativeMethod(NativeMethod::MapHas(map)),
                     "remove" => Value::NativeMethod(NativeMethod::MapRemove(map)),
@@ -1292,7 +1293,7 @@ impl Interpreter {
                     .map(Value::Num)
                     .map_err(|_parse_err| {
                         let err = RuntimeError::new(
-                            format!("could not parse number"),
+                            format!("could not parse number from '{string}'"),
                             ctx,
                         );
                         RuntimeOutcome::Error(err)
@@ -1383,6 +1384,30 @@ impl Interpreter {
                         );
                         RuntimeOutcome::Error(err)
                     })
+            },
+            NativeMethod::MapGet(map) => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(ref key) = arg {
+                    map
+                        .borrow()
+                        .get(key)
+                        .cloned()
+                        .ok_or_else(|| {
+                            let err = RuntimeError::new(
+                                format!("key '{arg}' not found on map"),
+                                ctx,
+                            );
+                            RuntimeOutcome::Error(err)
+                        })
+                }
+                else {
+                    let err = RuntimeError::new(
+                        "key must be a string".to_owned(),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
             },
             NativeMethod::MapSet(map) => {
                 let mut args = args.into_iter();
