@@ -286,7 +286,8 @@ impl Interpreter {
                                 Ok(Value::Num(num1 + num2))
                             },
                             (Value::Str(str1), val) => {
-                                Ok(Value::Str(format!("{str1}{val}")))
+                                let val_string = val.to_plain_string();
+                                Ok(Value::Str(format!("{str1}{val_string}")))
                             },
                             (op1, op2) => {
                                 let err = RuntimeError::new(
