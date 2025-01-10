@@ -1,0 +1,25 @@
+fun makeCounter() {
+    var i = 0;
+    let count = fun() {
+        i += 1;
+        println(i);
+    };
+
+    return count;
+}
+
+var counter = makeCounter();
+counter(); // "1".
+counter(); // "2".
+counter(); // "3".
+
+var a = "global";
+{
+    fun showA() {
+        println(a);
+    }
+
+    showA();  // "global"
+    var a = "block";
+    showA();  // "global"
+}

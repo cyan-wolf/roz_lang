@@ -4,12 +4,12 @@
     var acc = 0;
 
     while count < 10 {
-        count = count + 1;
+        count += 1;
         
         if count mod 2 == 0 {
             continue;
         }
-        acc = acc + count;
+        acc += count;
     }
 
     println(count); // 10
@@ -22,7 +22,7 @@
         if i == 5 {
             break;
         }
-        acc = acc + i;
+        acc += i;
     }
 
     println(acc); // 10

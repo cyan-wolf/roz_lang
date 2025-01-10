@@ -1,0 +1,12 @@
+class Car {
+    init(make, model) {
+        me.make = make;
+        me.model = model;
+    }
+}
+
+var car = Car("ExampleMake", "ExampleModel");
+
+fun ordinaryFunction() {
+    me.data = 1;  // resolution error
+}

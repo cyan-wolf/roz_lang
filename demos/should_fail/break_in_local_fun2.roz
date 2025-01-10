@@ -2,10 +2,10 @@ var is_running = true;
 var test;
 
 while is_running {
-    fun foo() {
+    var foo = fun() {
         // This should be a resolution error.
         break;
-    }
+    };
     test = foo;
 
     is_running = false;

@@ -1,0 +1,17 @@
+if typeof 1 == typeof "Hello World" {
+    println("Incorrect");
+} else {
+    println("Correct");
+}
+
+if 1 < 2 {
+    println("Correct");
+}
+
+var m = -999;
+
+if m * -1 == 999 {
+    println("Correct");
+} else {
+    println("Incorrect");
+}

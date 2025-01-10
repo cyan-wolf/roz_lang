@@ -1,0 +1,46 @@
+println("Expressions Demo: ");
+
+// Arithmetic expressions.
+println("1 + 2 = " + (1 + 2));             // 3
+println("1 + 4 * 2 = " + (1 + 4 * 2));     // 9
+println("2 * (4 + 6) = " + (2 * (4 + 6))); // 20
+println("0.5 * 2 = " + (0.5 * 2));         // 1
+println("9 / 2 = " + (9 / 2));             // 4.5
+println("");
+
+// Boolean expressions.
+println("3 * 0 == 0 is " + (3 * 0 == 0));  // true
+println("2 < 3 is " + (2 < 3));            // true
+println("3 > 3 is " + (3 > 3));            // false
+println("3 >= 3 is " + (3 >= 3));          // true
+println("1 == -1 is " + (1 == -1));        // false
+println("1 + -1 = " + (1 + -1));           // 0
+println("--35 == 35 is " + (--35 == 35));  // true
+println("45 != -999 is " + (45 != -999));  // true
+println("45 != 45 is " + (45 != 45));      // false
+println("");
+
+// String expressions.
+println("Hello" + " " + "World");          // Hello World
+println("");
+
+// `typeof` expressions.
+println("typeof 1 = " + (typeof 1));                               // <number>
+println("typeof -0.25 = " + (typeof -0.25));                       // <number>
+println("typeof 'Hello' = " + (typeof "Hello"));                   // <string>
+println("typeof (typeof 2) = " + (typeof (typeof 2)));             // <string>
+println("typeof (true or false) = " + (typeof (true or false)));   // <boolean>
+println("typeof nil = " + (typeof nil));                           // <nil>
+println("");
+
+// Boolean expressions.
+println("1 < 2 and 3 != 5 is " + (1 < 2 and 3 != 5));                          // true
+println("(3 == 999) or (-2 == 2 * -1) is " + ((3 == 999) or (-2 == 2 * -1)));  // true
+println("");
+
+// Mixed-type conditional expressions.
+println("nil or 34 = " + (nil or 34));     // 34
+println("56 or nil = " + (56 or nil));     // 56
+println("nil and 999 = " + (nil and 999)); // nil
+println("100 and nil = " + (100 and nil)); // nil
+println("");

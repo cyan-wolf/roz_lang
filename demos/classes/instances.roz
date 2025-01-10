@@ -1,0 +1,38 @@
+class Empty {}
+var empty = Empty();
+
+empty.data = 1;
+println(empty.data); // 1
+
+try {
+    println(empty.missingField); // runtime error
+}
+catch err {
+    println("error: " + err);
+}
+println("");
+
+class House {
+    init(owner, width, height) {
+        me.owner = owner;
+        me.width = width;
+        me.height = height;
+    }
+
+    area() {
+        return me.width * me.height;
+    }
+
+    cost() {
+        return me.area() * 100;
+    }
+}
+
+var house = House("John", 3, 5);
+println(house.area());          // 15
+println("$" + house.cost());    // $1500
+println("");
+
+var boundMethod = house.area;
+println(boundMethod);
+println(boundMethod());         // 15

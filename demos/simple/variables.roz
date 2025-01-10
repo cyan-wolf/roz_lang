@@ -1,0 +1,34 @@
+var a = 1;
+var b = 100 + (a - 1);
+
+println("a = " + a);        // 1
+println("b = " + b);        // 100
+
+var c;
+println("c = " + c);        // nil
+
+{
+    c = 42;
+    println("c = " + c);    // 42
+}
+
+println("c = " + c);        // 42
+
+var d;
+var e;
+var f;
+
+d = e = f = 0;
+
+println("d + e + f = " + (d + e + f));    // 0
+
+{
+    var x = -23;
+}
+
+try {
+    println("x = " + x);   // runtime error
+}
+catch err {
+    println("error: " + err);
+}

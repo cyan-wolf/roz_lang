@@ -1,0 +1,31 @@
+fun printList(list) {
+    for var i = 0; i < list.length(); i += 1 {
+        println(list.get(i));
+    }
+}
+
+var nums = [30, 20, 10];
+println("Numbers: ");
+printList(nums);
+println("");
+
+for var i = 0; i < nums.length(); i += 1 {
+    nums.set(i, nums.get(i) * 2);
+}
+println("Doubled: ");
+printList(nums);
+println("");
+
+println("Sorted: ");
+nums.sort();
+printList(nums);
+println("");
+
+println("Type: " + typeof nums);   // <list>
+println("Length: " + nums.length());
+println("String representation: " + toString(nums));
+println("");
+
+println("Using .push(): ");
+var greeting = [].push("Hello").push("World").push("....!");
+printList(greeting);

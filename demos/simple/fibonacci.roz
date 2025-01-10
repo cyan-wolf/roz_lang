@@ -5,11 +5,11 @@ var a = 0;
 var b = 1;
 
 while limit >= 0 {
-    print a;
+    println(a);
 
     var temp = a;
     a = b;
     b = temp + b;
 
-    limit = limit - 1;
+    limit -= 1;
 }
