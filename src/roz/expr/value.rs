@@ -285,6 +285,12 @@ impl Display for NativeFun {
 pub enum NativeMethod {
     // String methods.
     StrLength(String),
+    StrSplit(String),
+    StrParseNumber(String),
+    StrToUpper(String),
+    StrToLower(String),
+    StrIsUpper(String),
+    StrIsLower(String),
     // List methods.
     ListLength(RcCell<Vec<Value>>),
     ListGet(RcCell<Vec<Value>>),
@@ -306,6 +312,12 @@ impl NativeMethod {
         match self {
             // String methods.
             NativeMethod::StrLength(..) => 0,
+            NativeMethod::StrSplit(_) => 1,
+            NativeMethod::StrParseNumber(_) => 0,
+            NativeMethod::StrToUpper(_) => 0,
+            NativeMethod::StrToLower(_) => 0,
+            NativeMethod::StrIsUpper(_) => 0,
+            NativeMethod::StrIsLower(_) => 0,
             // List methods.
             NativeMethod::ListLength(..) => 0,
             NativeMethod::ListGet(..) => 1,
@@ -343,6 +355,12 @@ impl Display for NativeMethod {
             NativeMethod::MapRemove(..) => write!(f, "remove"),
             NativeMethod::MapClone(..) => write!(f, "clone"),
             NativeMethod::MapKeys(..) => write!(f, "keys"),
+            NativeMethod::StrSplit(_) => write!(f, "split"),
+            NativeMethod::StrParseNumber(_) => write!(f, "parseNumber"),
+            NativeMethod::StrToUpper(_) => write!(f, "toUpper"),
+            NativeMethod::StrToLower(_) => write!(f, "toLower"),
+            NativeMethod::StrIsUpper(_) => write!(f, "isUpper"),
+            NativeMethod::StrIsLower(_) => write!(f, "isLower"),
         }
     }
 }

@@ -667,6 +667,12 @@ impl Interpreter {
             Value::Str(string) => {
                 match property.extract_ident() {
                     "length" => Value::NativeMethod(NativeMethod::StrLength(string)),
+                    "split" => Value::NativeMethod(NativeMethod::StrSplit(string)),
+                    "parseNumber" => Value::NativeMethod(NativeMethod::StrParseNumber(string)),
+                    "toUpper" => Value::NativeMethod(NativeMethod::StrToUpper(string)),
+                    "toLower" => Value::NativeMethod(NativeMethod::StrToLower(string)),
+                    "isUpper" => Value::NativeMethod(NativeMethod::StrIsUpper(string)),
+                    "isLower" => Value::NativeMethod(NativeMethod::StrIsLower(string)),
                     _ => {
                         return None;
                     },
@@ -1251,6 +1257,58 @@ impl Interpreter {
         match native_method {
             NativeMethod::StrLength(string) => {
                 Ok(Value::Num(string.len() as f64))
+            },
+            NativeMethod::StrSplit(string) => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if let Value::Str(ref sep) = arg {
+                    let portions: Vec<_> = string
+                        .split(sep)
+                        .map(|s| Value::Str(s.to_owned()))
+                        .collect();
+
+                    Ok(Value::List(portions.to_rc_cell()))
+                }
+                // Special-case a nil separator to make it return the characters of the string.
+                else if let Value::Nil = arg {
+                    let characters: Vec<_> = string
+                        .chars()
+                        .map(|c| Value::Str(c.to_string()))
+                        .collect();
+
+                    Ok(Value::List(characters.to_rc_cell()))
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("separator must be a string"),
+                        ctx,
+                    );
+                    return Err(RuntimeOutcome::Error(err));
+                }
+            },
+            NativeMethod::StrParseNumber(string) => {
+                string
+                    .parse()
+                    .map(Value::Num)
+                    .map_err(|_parse_err| {
+                        let err = RuntimeError::new(
+                            format!("could not parse number"),
+                            ctx,
+                        );
+                        RuntimeOutcome::Error(err)
+                    })
+            },
+            NativeMethod::StrToUpper(string) => {
+                Ok(Value::Str(string.to_uppercase()))
+            },
+            NativeMethod::StrToLower(string) => {
+                Ok(Value::Str(string.to_lowercase()))
+            },
+            NativeMethod::StrIsUpper(string) => {
+                Ok(Value::Bool(string.chars().all(char::is_uppercase)))
+            },
+            NativeMethod::StrIsLower(string) => {
+                Ok(Value::Bool(string.chars().all(char::is_lowercase)))
             },
             NativeMethod::ListLength(list) => {
                 Ok(Value::Num(list.borrow().len() as f64))
