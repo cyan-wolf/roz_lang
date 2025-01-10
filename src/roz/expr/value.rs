@@ -103,6 +103,7 @@ impl PartialEq for Value {
                 // Classes do not work with equality.
                 false
             },
+            (Self::Namespace(a), Self::Namespace(b)) => a == b,
             (Self::Instance(a), Self::Instance(b)) => {
                 // Two instances are equal if they point to the same allocation.
                 Rc::ptr_eq(a, b)
@@ -197,6 +198,8 @@ pub enum NativeFun {
     ToString,
     Map,
     Error,
+    Assert,
+    AssertEq,
     // IO functions.
     IOReadLines,
     IOReadString,
@@ -224,6 +227,8 @@ impl NativeFun {
             NativeFun::ToString => 1,
             NativeFun::Map => 0,
             NativeFun::Error => 1,
+            NativeFun::Assert => 1,
+            NativeFun::AssertEq => 2,
             // IO functions.
             NativeFun::IOReadLines => 1,
             NativeFun::IOReadString => 1,
@@ -253,6 +258,8 @@ impl Display for NativeFun {
             NativeFun::ToString => write!(f, "toString"),
             NativeFun::Map => write!(f, "Map"),
             NativeFun::Error => write!(f, "Error"),
+            NativeFun::Assert => write!(f, "assert"),
+            NativeFun::AssertEq => write!(f, "assertEq"),
             // IO functions.
             NativeFun::IOReadLines => write!(f, "readLines"),
             NativeFun::IOReadString => write!(f, "readString"),

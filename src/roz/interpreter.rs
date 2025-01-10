@@ -922,6 +922,36 @@ impl Interpreter {
                 );
                 Ok(Value::Err(contained_err))
             },
+            NativeFun::Assert => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                if arg.to_bool() {
+                    Ok(Value::Nil)
+                } 
+                else {
+                    let err = RuntimeError::new(
+                        format!("assertion failed"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
+            NativeFun::AssertEq => {
+                let mut args = args.into_iter();
+                let arg1 = args.next().unwrap();
+                let arg2 = args.next().unwrap();
+
+                if arg1 == arg2 {
+                    Ok(Value::Nil)
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("assertion failed, '{arg1}' was not equal to '{arg2}'"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            },
             NativeFun::IOReadLines => {
                 let arg = args.into_iter().nth(0).unwrap();
 
@@ -1390,6 +1420,14 @@ impl Interpreter {
         globals.define(
             "Error".to_owned(),
             Value::NativeFun(NativeFun::Error),
+        );
+        globals.define(
+            "assert".to_owned(), 
+            Value::NativeFun(NativeFun::Assert),
+        );
+        globals.define(
+            "assertEq".to_owned(), 
+            Value::NativeFun(NativeFun::AssertEq),
         );
         // Namespaces.
         globals.define(
