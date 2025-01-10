@@ -762,6 +762,28 @@ impl Parser {
                 // Set the jumps to None, since those are set later in the resolver.
                 Expr::Var { lvalue: self.prev().clone(), jumps: None }
             },
+            TokenKind::Keyword(Keyword::Fun) => {
+                self.advance();
+
+                self.try_match(
+                    &TokenKind::Op(Op::LeftParen),
+                    |_| "expected '(' after function name".to_owned(),
+                )?;
+                let params = self.parameters()?;
+    
+                self.try_match(
+                    &TokenKind::Op(Op::RightParen),
+                    |_| "expected ')'".to_owned(),
+                )?;
+    
+                self.try_match(
+                    &TokenKind::Op(Op::LeftBrace),
+                    |_| "expected '{' after parameter list".to_owned(),
+                )?;
+                let body = self.statement_block()?;
+
+                Expr::Fun { params, body }
+            },
             TokenKind::Keyword(Keyword::Me) => {
                 self.advance();
                 Expr::Me { ctx: self.prev().clone() }

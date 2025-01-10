@@ -166,34 +166,27 @@ impl Interpreter {
                 return Err(RuntimeOutcome::Error(thrown_error));
             },
             Stmt::Fun(FunDecl {name, params, body}) => {
-                // Make the function object. Stores a reference to the 
-                // current environment (at definition time), which allows 
-                // the implementation of closures.
-                let fun = Value::Fun(Fun {
-                    name: Some(name.clone()), 
-                    params, 
-                    body, 
-                    env: Rc::clone(&self.curr_env),
-                });
+                let fun = self.build_fun(Some(name.clone()), params, body);
 
                 self.curr_env
                     .borrow_mut()
-                    .define(name, fun);
+                    .define(name, Value::Fun(fun));
             },
             Stmt::Class { name, methods } => {
                 let name = name.extract_ident();
 
                 // Convert the method declarations into function values.
+                // Collect them into a hash map that associates method names
+                // to the functions.
                 let method_fun_vals: HashMap<_, _> = methods.into_iter()
                     .map(|method| {
                         (
                             method.name.clone(),
-                            Fun {
-                                name: Some(method.name), 
-                                params: method.params, 
-                                body: method.body, 
-                                env: Rc::clone(&self.curr_env),
-                            },
+                            self.build_fun(
+                                Some(method.name), 
+                                method.params, 
+                                method.body
+                            ),
                         )
                     })
                     .collect();
@@ -574,6 +567,10 @@ impl Interpreter {
 
                 Ok(Value::List(elems.to_rc_cell()))
             },
+            Expr::Fun { params, body } => {
+                let fun = self.build_fun(None, params, body);
+                Ok(Value::Fun(fun))
+            },
             Expr::Var { lvalue, jumps } => {
                 let actual_env = self.find_actual_env(jumps);
                 let val = actual_env
@@ -648,6 +645,18 @@ impl Interpreter {
                 // before reaching the interpreter.
                 unreachable!("unexpected error: unresolved keyword 'me'")
             },
+        }
+    }
+
+    /// Build a runtime function. Stores a reference to the 
+    /// current environment (at definition time), which allows 
+    /// the implementation of closures.
+    fn build_fun(&mut self, name: Option<String>, params: Vec<Token>, body: Vec<Stmt>) -> Fun {
+        Fun {
+            name, 
+            params, 
+            body, 
+            env: Rc::clone(&self.curr_env),
         }
     }
 

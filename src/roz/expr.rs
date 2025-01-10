@@ -3,7 +3,7 @@ pub mod value;
 pub use value::Value;
 
 use std::fmt::Display;
-use super::token::Token;
+use super::{stmt::Stmt, token::Token};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -12,6 +12,10 @@ pub enum Expr {
     Binary { left: Box<Expr>, op: Token, right: Box<Expr> },
     Grouping(Box<Expr>),
     List(Vec<Expr>),
+    Fun {
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    },
     Var { lvalue: Token, jumps: Option<usize> },
     Assign { lvalue: Token, rvalue: Box<Expr>, jumps: Option<usize> },
     Call { callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
@@ -38,6 +42,7 @@ impl Display for Expr {
 
                 write!(f, "]")
             },
+            Expr::Fun { .. } =>  write!(f, "(fun(..) {{..}})"),
             Expr::Var { lvalue, .. } => write!(f, "var({lvalue})"),
             Expr::Assign { lvalue, rvalue, .. } => write!(f, "({lvalue} = {rvalue})"),
             Expr::Call { callee, args, ctx: _ } => write!(f, "({callee} calls {args:?})"),

@@ -194,6 +194,26 @@ impl Resolver {
                     self.resolve_expr(elem, ctx);
                 }
             },
+            Expr::Fun { params, body } => {
+                let ctx = ctx
+                    .clone()
+                    .with_effect(Effect::InFunction)
+                    .without_effect(&Effect::InLoop); // functions reset the loop context
+
+                self.begin_scope();
+
+                for param in params {
+                    let ident = param.extract_ident().to_owned();
+                    self.declare(ident.clone());
+                    self.define(ident);
+                }
+        
+                // No need to use `Resolver::resolve_block`, since we already
+                // began a scope.
+                self.resolve_statements(body, &ctx);
+
+                self.end_scope();
+            },
             Expr::Var { ref lvalue, jumps } => {
                 if let Some(scope) = self.scopes.last() {
                     let ident = lvalue.extract_ident();
