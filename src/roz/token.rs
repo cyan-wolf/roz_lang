@@ -96,6 +96,7 @@ pub enum Keyword {
     Try,
     Catch,
     Finally,
+    Throw,
 }
 
 impl Display for Op {
@@ -164,6 +165,7 @@ impl Display for Keyword {
             Keyword::Try => "try",
             Keyword::Catch => "catch",
             Keyword::Finally => "finally",
+            Keyword::Throw => "throw",
         };
 
         write!(f, "{str}")

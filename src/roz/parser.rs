@@ -69,6 +69,9 @@ impl Parser {
         else if self.match_any([TokenKind::Keyword(Keyword::Try)]) {
             self.statement_try()
         }
+        else if self.match_any([TokenKind::Keyword(Keyword::Throw)]) {
+            self.statement_throw()
+        }
         else if self.match_any([TokenKind::Keyword(Keyword::Return)]) {
             self.statement_return()
         }
@@ -277,6 +280,20 @@ impl Parser {
         };
 
         let stmt = Stmt::Try { try_branch, catch_branch, finally_branch };
+        Ok(stmt)
+    }
+
+    fn statement_throw(&mut self) -> Result<Stmt, SyntaxError> {
+        let throw_keyword = self.prev().clone();
+        let expr = self.expression()?;
+
+        // Match a ';' to terminate the statement.
+        self.try_match(
+            &TokenKind::Op(Op::Semicolon),
+            |_| "expected ';' after 'throw'".to_owned(),
+        )?;
+
+        let stmt = Stmt::Throw(throw_keyword, expr);
         Ok(stmt)
     }
 

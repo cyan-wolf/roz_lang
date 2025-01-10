@@ -109,6 +109,9 @@ impl Resolver {
                     self.resolve_scoped(finally_branch, ctx);
                 }
             },
+            Stmt::Throw(_ctx_token, expr) => {
+                self.resolve_expr(expr, ctx);
+            },
             Stmt::Fun(fun_decl) => {
                 self.resolve_fun(fun_decl, ctx);
             },

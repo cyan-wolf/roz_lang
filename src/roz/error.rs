@@ -33,7 +33,7 @@ impl Display for SyntaxError {
 impl std::error::Error for SyntaxError {}
 
 /// Error type used in the interpreter.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RuntimeError {
     message: String,
     token: Token,
@@ -47,8 +47,8 @@ impl RuntimeError {
         }
     }
 
-    pub fn into_message(self) -> String {
-        self.message
+    pub fn message(&self) -> &str {
+        &self.message
     }
 }
 

@@ -14,6 +14,7 @@ pub enum Stmt {
         catch_branch: Option<(Token, Vec<Stmt>)>, 
         finally_branch: Option<Vec<Stmt>>,
     },
+    Throw(Token, Expr),
     Fun(FunDecl),
     Class { name: Token, methods: Vec<FunDecl> },
     Return { ctx: Token, ret_value: Expr },

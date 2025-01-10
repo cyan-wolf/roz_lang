@@ -137,7 +137,7 @@ impl Interpreter {
                             catch_env.borrow_mut()
                                 .define(
                                     error_name.extract_ident().to_owned(),
-                                    Value::Error(incoming_err.into_message()),
+                                    Value::Err(incoming_err),
                                 );
 
                             let outcome_catch = self.execute_scoped(catch_branch, catch_env);
@@ -157,6 +157,13 @@ impl Interpreter {
                         outcome_try?
                     },
                 }
+            },
+            Stmt::Throw(ctx, expr) => {
+                let thrown_error = RuntimeError::new(
+                    self.evaluate(expr)?.to_plain_string(),
+                    ctx,
+                );
+                return Err(RuntimeOutcome::Error(thrown_error));
             },
             Stmt::Fun(FunDecl {name, params, body}) => {
                 // Make the function object. Stores a reference to the 
@@ -865,11 +872,8 @@ impl Interpreter {
             NativeFun::Println => {
                 let arg = args.into_iter().nth(0).unwrap();
 
-                match arg {
-                    // Special-case string formatting to remove the quotes.
-                    Value::Str(string) => println!("{string}"),
-                    _ => println!("{arg}"),
-                };
+                let string = arg.to_plain_string();
+                println!("{string}");
 
                 Ok(Value::Nil)
             },
@@ -892,15 +896,21 @@ impl Interpreter {
             NativeFun::ToString => {
                 let arg = args.into_iter().nth(0).unwrap();
 
-                let string = match arg {
-                    // Special-case string formatting to remove the quotes.
-                    Value::Str(string) => string,
-                    _ => format!("{arg}"),
-                };
+                let string = arg.to_plain_string();
                 Ok(Value::Str(string))
             },
             NativeFun::Map => {
                 Ok(Value::Map(HashMap::new().to_rc_cell()))
+            },
+            NativeFun::Error => {
+                let arg = args.into_iter().nth(0).unwrap();
+                let string = arg.to_plain_string();
+
+                let contained_err = RuntimeError::new(
+                    string,
+                    ctx,
+                );
+                Ok(Value::Err(contained_err))
             },
             NativeFun::IOReadLines => {
                 let arg = args.into_iter().nth(0).unwrap();
@@ -1362,9 +1372,14 @@ impl Interpreter {
             "toString".to_owned(),
             Value::NativeFun(NativeFun::ToString),
         );
+        // Built-in type constructors.
         globals.define(
             "Map".to_owned(),
             Value::NativeFun(NativeFun::Map),
+        );
+        globals.define(
+            "Error".to_owned(),
+            Value::NativeFun(NativeFun::Error),
         );
         // Namespaces.
         globals.define(

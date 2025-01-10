@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::rc::Rc;
 
+use crate::roz::error::RuntimeError;
 use crate::roz::util::RcCell;
 
 #[derive(Debug, Clone)]
@@ -17,7 +18,7 @@ pub enum Value {
     Bool(bool),
     List(RcCell<Vec<Value>>),
     Map(RcCell<HashMap<String, Value>>),
-    Error(String),
+    Err(RuntimeError),
     NativeFun(NativeFun),
     NativeMethod(NativeMethod),
     Fun(Fun),
@@ -36,7 +37,7 @@ impl Value {
             Value::Bool(_) => "<boolean>".to_owned(),
             Value::List(_) => "<list>".to_owned(),
             Value::Map(_) => "<map>".to_owned(),
-            Value::Error(_) => "<error>".to_owned(),
+            Value::Err(_) => "<error>".to_owned(),
             Value::NativeFun(_) => "<native fun>".to_owned(),
             Value::NativeMethod(_) => "<native method>".to_owned(),
             Value::Fun(..) => "<fun>".to_owned(),
@@ -57,6 +58,17 @@ impl Value {
             Value::Bool(bool) => *bool,
             Value::Nil => false,
             _ => true,
+        }
+    }
+
+    /// The same as `Value::to_string`, but removes 
+    /// quotes from string values and removes extra formatting
+    /// from errors.
+    pub fn to_plain_string(&self) -> String {
+        match self {
+            Value::Str(string) => string.to_owned(),
+            Value::Err(err) => err.message().to_owned(),
+            _ => self.to_string(),
         }
     }
 }
@@ -146,9 +158,10 @@ impl Display for Value {
                 }
                 write!(f, "}}")
             },
-            Value::Error(err_message) => {
-                write!(f, "{err_message}")
-            }
+            Value::Err(err) => {
+                let msg = err.message();
+                write!(f, "Error(\"{msg}\")")
+            },
             Value::NativeFun(native_fun) => {
                 write!(f, "{{native function {native_fun}}}")
             },
@@ -183,6 +196,7 @@ pub enum NativeFun {
     Clock,
     ToString,
     Map,
+    Error,
     // IO functions.
     IOReadLines,
     IOReadString,
@@ -209,6 +223,7 @@ impl NativeFun {
             NativeFun::Clock => 0,
             NativeFun::ToString => 1,
             NativeFun::Map => 0,
+            NativeFun::Error => 1,
             // IO functions.
             NativeFun::IOReadLines => 1,
             NativeFun::IOReadString => 1,
@@ -237,6 +252,7 @@ impl Display for NativeFun {
             NativeFun::Clock => write!(f, "clock"),
             NativeFun::ToString => write!(f, "toString"),
             NativeFun::Map => write!(f, "Map"),
+            NativeFun::Error => write!(f, "Error"),
             // IO functions.
             NativeFun::IOReadLines => write!(f, "readLines"),
             NativeFun::IOReadString => write!(f, "readString"),

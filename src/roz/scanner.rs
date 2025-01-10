@@ -272,6 +272,7 @@ impl Scanner {
             "try" => Keyword::Try,
             "catch" => Keyword::Catch,
             "finally" => Keyword::Finally,
+            "throw" => Keyword::Throw,
             _ => return None,
         };
 
