@@ -6,9 +6,8 @@ use context::{Context, Effect};
 
 use super::{
     error::{ResolutionError, RozError}, 
-    expr::Expr, 
+    expr::{Expr, VarAccess}, 
     stmt::{FunDecl, Stmt}, 
-    token::Token,
 };
 
 pub struct Resolver {
@@ -214,15 +213,15 @@ impl Resolver {
 
                 self.end_scope();
             },
-            Expr::Var { ref lvalue, jumps } => {
+            Expr::Var(access) => {
                 if let Some(scope) = self.scopes.last() {
-                    let ident = lvalue.extract_ident();
+                    let ident = access.lvalue.extract_ident();
                     
                     if let Some(is_init) = scope.get(ident) {
                         if !is_init {
                             let err = ResolutionError::new(
                                 format!("can't read local variable '{ident}' in its own initializer"),
-                                lvalue.clone(),
+                                access.lvalue.clone(),
                             );
                             self.errs.push(err);
                         }
@@ -230,13 +229,13 @@ impl Resolver {
                 }
 
                 // Modify the AST to include the jump amount.
-                *jumps = self.resolve_variable(lvalue);
+                self.resolve_var_access(access);
             },
-            Expr::Assign {ref lvalue, rvalue, jumps } => {
+            Expr::Assign { access, rvalue } => {
                 self.resolve_expr(&mut *rvalue, ctx);
 
                 // Modify the AST to include the jump amount.
-                *jumps = self.resolve_variable(lvalue);
+                self.resolve_var_access(access);
             },
             Expr::Call { callee, args, ctx: _ } => {
                 self.resolve_expr(&mut *callee, ctx);
@@ -252,22 +251,18 @@ impl Resolver {
                 self.resolve_expr(rvalue, ctx);
 
             },
-            Expr::Me { ctx: ref ctx_token } => {
+            Expr::Me(access) => {
                 // Generate an error if 'me' appears outside of a method.
                 if !ctx.has_effect(&Effect::InMethod) {
                     let error = ResolutionError::new(
                         "keyword 'me' outside of method".to_owned(),
-                        ctx_token.clone(),
+                        access.lvalue.clone(),
                     );
                     self.errs.push(error);
                 }
-
-                // Change the current expression into an `Expr::Var`
-                // before resolving.
-                *expr = Expr::Var { lvalue: ctx_token.clone(), jumps: None };
                 
-                // This delegates to the `Expr::Var` resolution algorithm.
-                self.resolve_expr(expr, ctx);
+                // Modify the AST to include the jump amount.
+                self.resolve_var_access(access);
             },
         }
     }
@@ -283,17 +278,18 @@ impl Resolver {
     /// Look for the variable references by `ident` starting from the 
     /// outermost scope and checking all the way until the most general scope.
     /// Used for modifying the AST.
-    fn resolve_variable(&mut self, ident: &Token) -> Option<usize> {
+    fn resolve_var_access(&mut self, access: &mut VarAccess) {
+        let VarAccess { lvalue, jumps } = access;
+
         for i in (0..self.scopes.len()).rev() {
-            if self.scopes[i].contains_key(ident.extract_ident()) {
+            if self.scopes[i].contains_key(lvalue.extract_ident()) {
                 let outermost_scope_idx = self.scopes.len() - 1;
                 
                 // The number of scopes between the current (outermost) scope
                 // and the scope where the variable was found (in this case, `i`).
-                return Some(outermost_scope_idx - i);
+                *jumps = Some(outermost_scope_idx - i);
             }
         }
-        return None; // unreachable?
     }
 
     /// Resolve a function/method and any sub-statements.

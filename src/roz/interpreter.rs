@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufWriter};
 use std::rc::Rc;
 use super::expr::value::{Class, Fun, Instance, NativeFun, NativeMethod};
-use super::expr::{Expr, Value};
+use super::expr::{Expr, Value, VarAccess};
 use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Op, Token, TokenKind};
 use super::error::{RozError, RuntimeError};
@@ -572,15 +572,10 @@ impl Interpreter {
                 let fun = self.build_fun(None, params, body);
                 Ok(Value::Fun(fun))
             },
-            Expr::Var { lvalue, jumps } => {
-                let actual_env = self.find_actual_env(jumps);
-                let val = actual_env
-                    .borrow()
-                    .retrieve(lvalue)?;
-
-                Ok(val)
+            Expr::Var(access) => {
+                self.find_value_with_var_access(access)
             },
-            Expr::Assign { lvalue, rvalue, jumps } => {
+            Expr::Assign { access: VarAccess { lvalue, jumps }, rvalue } => {
                 let rvalue = self.evaluate(*rvalue)?;
 
                 let actual_env = self.find_actual_env(jumps);
@@ -641,10 +636,8 @@ impl Interpreter {
                     },
                 }
             },
-            Expr::Me { ctx: _ } => {
-                // Note: 'me' expressions get resolved to `Expr::Var` expressions
-                // before reaching the interpreter.
-                unreachable!("unexpected error: unresolved keyword 'me'")
+            Expr::Me(access) => {
+                self.find_value_with_var_access(access)
             },
         }
     }
@@ -741,6 +734,7 @@ impl Interpreter {
         Some(method)
     }
 
+    /// Helper method for `Interpreter::find_value_with_var_access`.
     fn find_actual_env(&self, jumps: Option<usize>) -> RcCell<Environment> {
         let curr_env = Rc::clone(&self.curr_env);
 
@@ -753,6 +747,16 @@ impl Interpreter {
             // There are no jumps, so the variable is in the global scope.
             None => curr_env
         }
+    }
+
+    /// Finds a value in the correct environment using a variable access node.
+    fn find_value_with_var_access(&self, access: VarAccess) -> Result<Value, RuntimeOutcome> {
+        let actual_env = self.find_actual_env(access.jumps);
+        let val = actual_env
+            .borrow()
+            .retrieve(access.lvalue)?;
+
+        Ok(val)
     }
 
     fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {

@@ -1,5 +1,5 @@
 use super::error::{RozError, SyntaxError};
-use super::expr::{Expr, Value};
+use super::expr::{Expr, Value, VarAccess};
 use super::stmt::{FunDecl, Stmt};
 use super::token::{Keyword, Literal, Op, Token, TokenKind};
 use super::util::ToBox;
@@ -463,9 +463,12 @@ impl Parser {
     fn finish_building_assignment(&mut self, expr: Expr, rvalue: Box<Expr>, ctx: Token) -> Result<Expr, SyntaxError> {
         // If the left hand side of the '=' was a simple variable access,
         // then the whole expression is a simple assignment.
-        if let Expr::Var { lvalue, .. } = expr {
+        if let Expr::Var(VarAccess {  lvalue, .. }) = expr {
             // The jumps are set later in the resolver.
-            let assign_expr = Expr::Assign { lvalue, rvalue, jumps: None };
+            let assign_expr = Expr::Assign { 
+                access: VarAccess { lvalue, jumps: None }, 
+                rvalue,
+            };
             Ok(assign_expr)
         }
         // If the left hand side of the '=' was a property access 
@@ -760,7 +763,7 @@ impl Parser {
             TokenKind::Literal(Literal::Ident(_)) => {
                 self.advance();
                 // Set the jumps to None, since those are set later in the resolver.
-                Expr::Var { lvalue: self.prev().clone(), jumps: None }
+                Expr::Var(VarAccess{ lvalue: self.prev().clone(), jumps: None })
             },
             TokenKind::Keyword(Keyword::Fun) => {
                 self.advance();
@@ -786,7 +789,8 @@ impl Parser {
             },
             TokenKind::Keyword(Keyword::Me) => {
                 self.advance();
-                Expr::Me { ctx: self.prev().clone() }
+                // Jumps are set later in the resolver.
+                Expr::Me(VarAccess { lvalue: self.prev().clone(), jumps: None })
             },
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();

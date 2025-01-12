@@ -6,6 +6,12 @@ use std::fmt::Display;
 use super::{stmt::Stmt, token::Token};
 
 #[derive(Debug, Clone)]
+pub struct VarAccess {
+    pub lvalue: Token,
+    pub jumps: Option<usize>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Literal(Value),
     Unary { op: Token, expr: Box<Expr> },
@@ -16,12 +22,12 @@ pub enum Expr {
         params: Vec<Token>,
         body: Vec<Stmt>,
     },
-    Var { lvalue: Token, jumps: Option<usize> },
-    Assign { lvalue: Token, rvalue: Box<Expr>, jumps: Option<usize> },
+    Var(VarAccess),
+    Assign { access: VarAccess, rvalue: Box<Expr> },
     Call { callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
+    Me(VarAccess),
     Get { source: Box<Expr>, property: Token },
     Set { source: Box<Expr>, property: Token, rvalue: Box<Expr> },
-    Me { ctx: Token },
 }
 
 impl Display for Expr {
@@ -43,8 +49,10 @@ impl Display for Expr {
                 write!(f, "]")
             },
             Expr::Fun { .. } =>  write!(f, "(fun(..) {{..}})"),
-            Expr::Var { lvalue, .. } => write!(f, "var({lvalue})"),
-            Expr::Assign { lvalue, rvalue, .. } => write!(f, "({lvalue} = {rvalue})"),
+            Expr::Var(VarAccess { lvalue, .. }) => write!(f, "var({lvalue})"),
+            Expr::Assign { access: VarAccess { lvalue, .. }, rvalue, .. } => {
+                write!(f, "({lvalue} = {rvalue})")
+            },
             Expr::Call { callee, args, ctx: _ } => write!(f, "({callee} calls {args:?})"),
             Expr::Get { source, property } => write!(f, "(get {source}.{property})"),
             Expr::Set { source, property, rvalue } => {
