@@ -1,4 +1,4 @@
-use super::{expr::Expr, token::Token};
+use super::{expr::{Expr, VarAccess}, token::Token};
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
@@ -16,7 +16,7 @@ pub enum Stmt {
     },
     Throw(Token, Expr),
     Fun(FunDecl),
-    Class { name: Token, methods: Vec<FunDecl> },
+    Class { name: Token, methods: Vec<FunDecl>, superclass: Option<VarAccess> },
     Return { ctx: Token, ret_value: Expr },
     Break(Token),
     Continue(Token),

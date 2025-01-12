@@ -9,6 +9,7 @@ use super::{Fun, Value};
 pub struct Class {
     pub name: String,
     pub methods: HashMap<String, Fun>,
+    pub superclass: Option<Box<Class>>,
 }
 
 impl Class {
@@ -16,6 +17,9 @@ impl Class {
         let method_name = method_ident.extract_ident();
         if let Some(method) = self.methods.get(method_name) {
             Ok(method.clone())
+        }
+        else if let Some(superclass) = &self.superclass {
+            superclass.find_method(method_ident)
         }
         else {
             let error = RuntimeError::new(

@@ -172,7 +172,7 @@ impl Interpreter {
                     .borrow_mut()
                     .define(name, Value::Fun(fun));
             },
-            Stmt::Class { name, methods } => {
+            Stmt::Class { name, methods, superclass } => {
                 let name = name.extract_ident();
 
                 // Convert the method declarations into function values.
@@ -191,9 +191,12 @@ impl Interpreter {
                     })
                     .collect();
 
+                let superclass = self.extract_superclass(superclass)?.map(Box::new);
+
                 let class = Value::Class(Class { 
                     name: name.to_owned(), 
                     methods: method_fun_vals,
+                    superclass,
                 });
 
                 self.curr_env
@@ -573,7 +576,7 @@ impl Interpreter {
                 Ok(Value::Fun(fun))
             },
             Expr::Var(access) => {
-                self.find_value_with_var_access(access)
+                self.find_value_with_var_access(&access)
             },
             Expr::Assign { access: VarAccess { lvalue, jumps }, rvalue } => {
                 let rvalue = self.evaluate(*rvalue)?;
@@ -637,7 +640,7 @@ impl Interpreter {
                 }
             },
             Expr::Me(access) => {
-                self.find_value_with_var_access(access)
+                self.find_value_with_var_access(&access)
             },
         }
     }
@@ -750,13 +753,35 @@ impl Interpreter {
     }
 
     /// Finds a value in the correct environment using a variable access node.
-    fn find_value_with_var_access(&self, access: VarAccess) -> Result<Value, RuntimeOutcome> {
+    fn find_value_with_var_access(&self, access: &VarAccess) -> Result<Value, RuntimeOutcome> {
         let actual_env = self.find_actual_env(access.jumps);
         let val = actual_env
             .borrow()
-            .retrieve(access.lvalue)?;
+            .retrieve(&access.lvalue)?;
 
         Ok(val)
+    }
+
+    /// Extracts a superclass value from a variable access.
+    fn extract_superclass(&self, superclass: Option<VarAccess>) -> Result<Option<Class>, RuntimeOutcome> {
+        let superclass = if let Some(access) = superclass {
+            let val = self.find_value_with_var_access(&access)?;
+
+            if let Value::Class(superclass) = val {
+                Some(superclass)
+            }
+            else {
+                let err = RuntimeError::new(
+                    format!("invalid superclass, value '{val}' is not a class"),
+                    access.lvalue.to_owned(),
+                );
+                return Err(RuntimeOutcome::Error(err));
+            }
+        } else {
+            None
+        };
+
+        Ok(superclass)
     }
 
     fn try_call_value(&mut self, callee: Value, args: Vec<Value>, ctx: Token) -> Result<Value, RuntimeOutcome> {

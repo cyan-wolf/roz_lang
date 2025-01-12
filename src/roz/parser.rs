@@ -348,6 +348,27 @@ impl Parser {
             return Err(err);
         };
 
+        let superclass = if self.match_any([TokenKind::Op(Op::Less)]) {
+            if let TokenKind::Literal(Literal::Ident(..)) = self.peek().kind() {
+                self.advance();
+                // Jumps are set later in the resolver.
+                let superclass = VarAccess { lvalue: self.prev().clone(), jumps: None };
+                Some(superclass)
+            }
+            else {
+                let token = self.prev().clone();
+                let err = SyntaxError::new(
+                    token.line(),
+                    format!("expected superclass name after '{token}'"),
+                    Some(token),
+
+                );
+                return Err(err);
+            }
+        } else {
+            None
+        };
+
         self.try_match(
             &TokenKind::Op(Op::LeftBrace),
             |_| "expected '{' after class name".to_owned(),
@@ -364,7 +385,7 @@ impl Parser {
             |_| "expected '}' after class body".to_owned(),
         )?;
         
-        let stmt = Stmt::Class { name, methods };
+        let stmt = Stmt::Class { name, methods, superclass };
         Ok(stmt)
     }
 

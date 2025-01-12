@@ -114,10 +114,23 @@ impl Resolver {
             Stmt::Fun(fun_decl) => {
                 self.resolve_fun(fun_decl, ctx);
             },
-            Stmt::Class { ref name, methods } => {
+            Stmt::Class { ref name, methods, superclass } => {
                 let ident = name.extract_ident().to_owned();
                 self.declare(ident.clone());
                 self.define(ident);
+
+                if let Some(superclass) = superclass {
+                    // Check that a class doesn't try to inherit from itself.
+                    if name.extract_ident() == superclass.lvalue.extract_ident() {
+                        let err = ResolutionError::new(
+                            "classes cannot inherit from themselves".to_owned(),
+                            superclass.lvalue.clone(),
+                        );
+                        self.errs.push(err);
+                    }
+
+                    self.resolve_var_access(superclass);
+                }
 
                 for method_decl in methods {
                     // Begin the additional scope that contains 'me'.
@@ -275,9 +288,9 @@ impl Resolver {
         self.end_scope();
     }
 
-    /// Look for the variable references by `ident` starting from the 
-    /// outermost scope and checking all the way until the most general scope.
-    /// Used for modifying the AST.
+    /// Calculates how many scopes a variable has to jump to access its value.
+    /// Note: This method modifies the AST by including the jump information
+    /// in variable access nodes.
     fn resolve_var_access(&mut self, access: &mut VarAccess) {
         let VarAccess { lvalue, jumps } = access;
 

@@ -31,7 +31,7 @@ impl Environment {
         self.map.insert(ident, val);
     }
 
-    pub fn retrieve(&self, token: Token) -> Result<Value, RuntimeError> {
+    pub fn retrieve(&self, token: &Token) -> Result<Value, RuntimeError> {
         let ident = token.extract_ident();
 
         if let Some(val) = self.map.get(ident) {
@@ -43,7 +43,7 @@ impl Environment {
         else {
             let err = RuntimeError::new(
                 format!("undefined variable name '{token}'"),
-                token,
+                token.to_owned(),
             );
             Err(err)
         }
