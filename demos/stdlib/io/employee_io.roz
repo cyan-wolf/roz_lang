@@ -1,0 +1,139 @@
+
+// Base class for all employees.
+class Employee {
+    init(id, name, department) {
+        me.id = id;
+        me.name = name;
+        me.department = department;
+    }
+
+    weeklySalary() {
+        throw Error("unimplemented");
+    }
+
+    getKind() {
+        throw Error("unimplemented");
+    }
+}
+
+// Represents an hourly employee.
+class HourlyEmployee < Employee {
+    init(id, name, department, payRate, hoursWorked) {
+        super.init(id, name, department);
+        me.payRate = payRate;
+        me.hoursWorked = hoursWorked;
+    }
+
+    weeklySalary() {
+        if me.hoursWorked > 40 {
+            var overtimeRate = 2;
+            return me.payRate * 40 + overtimeRate * (me.hoursWorked - 40);
+        }
+        else {
+            return me.payRate * me.hoursWorked;
+        }
+    }
+
+    getKind() {
+        return "H";
+    }
+}
+
+// Represents a salesperson.
+class Salesperson < Employee {
+    init(id, name, department, commission, salesAmt) {
+        super.init(id, name, department);
+        me.commission = commission;
+        me.salesAmt = salesAmt;
+    }
+
+    weeklySalary() {
+        return me.commission * me.salesAmt;
+    }
+
+    getKind() {
+        return "S";
+    }
+}
+
+// Hash map that converts numbers to departments.
+var deptFromNumber = Map()
+    .set("0", "Finance")
+    .set("1", "Human Resources")
+    .set("2", "Information Technology")
+    .set("3", "Marketing")
+    .set("4", "Sales");
+
+// Hash map that converts departments to numbers.
+var numberFromDept = Map()
+    .set("Finance", 0)
+    .set("Human Resources", 1)
+    .set("Information Technology", 2)
+    .set("Marketing", 3)
+    .set("Sales", 4);
+
+// Parses a list of employees from the given file path.
+fun parseEmployees(filePath) {
+    var lines = io.readLines(filePath);
+    var employees = [];
+
+    for var i = 0; i < lines.length(); i += 1 {
+        var fields = lines.get(i).split("|");
+        var id = fields.get(1);
+        var name = fields.get(2);
+        var dept = deptFromNumber.get(fields.get(3));
+
+        var emp;
+
+        // Hourly employee.
+        if fields.get(0) == "H" {
+            var payRate = fields.get(4).parseNumber();
+            var hoursWorked = fields.get(5).parseNumber();
+
+            emp = HourlyEmployee(id, name, dept, payRate, hoursWorked);
+        }
+        // Salesperson.
+        else {
+            var commission = fields.get(4).parseNumber();
+            var salesAmt = fields.get(5).parseNumber();
+
+            emp = Salesperson(id, name, dept, commission, salesAmt);
+        }
+
+        employees.push(emp);
+    }
+    return employees;
+}
+
+// Calculates the payroll for each of the given employees
+// and writes them to the given file path.
+fun writeEmployeePayrolls(employees, filePath) {
+    var lines = [];
+
+    for var i = 0; i < employees.length(); i += 1 {
+        var emp = employees.get(i);
+
+        var line = 
+            emp.getKind() + "|"
+            + emp.id + "|"
+            + emp.name + "|"
+            + numberFromDept.get(emp.department) + "|"
+            + emp.weeklySalary();
+
+        lines.push(line);
+    }
+    
+    io.writeLines(filePath, lines);
+}
+
+// Entry point for the program.
+fun main() {
+    var employees = parseEmployees("employees.txt");
+    var employeeAmt = employees.length();
+    println("Successfully read " + employeeAmt + " employees.");
+
+    writeEmployeePayrolls(employees, "payroll.txt");
+    println("Successfully written " + employeeAmt + " employee payrolls.");
+}
+
+main();
