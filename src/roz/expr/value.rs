@@ -194,6 +194,7 @@ impl Display for Value {
 #[derive(Debug, PartialEq, Clone)]
 pub enum NativeFun {
     Println,
+    Input,
     Clock,
     ToString,
     Map,
@@ -223,6 +224,7 @@ impl NativeFun {
     pub fn arity(&self) -> usize {
         match self {
             NativeFun::Println => 1,
+            NativeFun::Input => 1,
             NativeFun::Clock => 0,
             NativeFun::ToString => 1,
             NativeFun::Map => 0,
@@ -254,6 +256,7 @@ impl Display for NativeFun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             NativeFun::Println => write!(f, "println"),
+            NativeFun::Input => write!(f, "input"),
             NativeFun::Clock => write!(f, "clock"),
             NativeFun::ToString => write!(f, "toString"),
             NativeFun::Map => write!(f, "Map"),

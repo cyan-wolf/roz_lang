@@ -983,6 +983,22 @@ impl Interpreter {
 
                 Ok(Value::Nil)
             },
+            NativeFun::Input => {
+                let arg = args.into_iter().nth(0).unwrap();
+
+                let prompt = arg.to_plain_string();
+                print!("{prompt}");
+                std::io::stdout()
+                    .flush()
+                    .unwrap();
+
+                let mut buf = String::new();
+                std::io::stdin()
+                    .read_line(&mut buf)
+                    .unwrap();
+
+                Ok(Value::Str(buf.trim().to_owned()))
+            },
             NativeFun::Clock => {
                 use std::time;
 
@@ -1575,6 +1591,10 @@ impl Interpreter {
         globals.define(
             "println".to_owned(), 
             Value::NativeFun(NativeFun::Println),
+        );
+        globals.define(
+            "input".to_owned(), 
+            Value::NativeFun(NativeFun::Input),
         );
         globals.define(
             "clock".to_owned(), 
