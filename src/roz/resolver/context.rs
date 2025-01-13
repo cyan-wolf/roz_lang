@@ -5,8 +5,10 @@ use std::collections::HashSet;
 pub enum Effect {
     /// Used for restricting the use of `return`. 
     InFunction,
-    /// Used for restricting the use of `this`.
+    /// Used for restricting the use of `this` and `super`.
     InMethod,
+    /// Used for restricting the use of `super` outside of subclasses.
+    InSubclass,
     /// Used for restricting the use of `break` and `continue`.
     InLoop,
 }

@@ -151,7 +151,15 @@ impl Resolver {
                     // Begin the additional scope that contains 'me'.
                     self.begin_scope();
 
-                    let ctx = ctx.clone().with_effect(Effect::InMethod);
+                    let ctx = {
+                        let ctx = ctx.clone().with_effect(Effect::InMethod);
+
+                        if has_superclass {
+                            ctx.with_effect(Effect::InSubclass)
+                        } else {
+                            ctx
+                        }
+                    };
 
                     // Add 'me' to the current scope.
                     self.scopes
@@ -298,6 +306,21 @@ impl Resolver {
                 self.resolve_var_access(access);
             },
             Expr::Super { access, property: _ } => {
+                if !ctx.has_effect(&Effect::InMethod) {
+                    let error = ResolutionError::new(
+                        "keyword 'super' outside of method".to_owned(),
+                        access.lvalue.clone(),
+                    );
+                    self.errs.push(error);
+                }
+                if !ctx.has_effect(&Effect::InSubclass) {
+                    let error = ResolutionError::new(
+                        "cannot use 'super' since class has no superclass".to_owned(),
+                        access.lvalue.clone(),
+                    );
+                    self.errs.push(error);
+                }
+
                 // Modify the AST to include the jump amount.
                 self.resolve_var_access(access);
             }

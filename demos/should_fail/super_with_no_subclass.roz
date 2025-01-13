@@ -1,0 +1,5 @@
+class NotASubclass {
+    test() {
+        super.test();   // resolution error
+    }
+}
