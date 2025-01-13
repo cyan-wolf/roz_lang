@@ -118,7 +118,7 @@ fun writeEmployeePayrolls(employees, filePath) {
             + emp.id + "|"
             + emp.name + "|"
             + numberFromDept.get(emp.department) + "|"
-            + emp.weeklySalary();
+            + roundNumber(emp.weeklySalary(), 2);
 
         lines.push(line);
     }

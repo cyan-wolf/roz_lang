@@ -6,6 +6,7 @@ use rand::Rng;
 use core::f64;
 use std::collections::HashMap;
 use std::io::{BufRead, BufWriter};
+use std::iter;
 use std::rc::Rc;
 use super::expr::value::{Class, Fun, Instance, NativeFun, NativeMethod};
 use super::expr::{Expr, Value, VarAccess};
@@ -1021,6 +1022,90 @@ impl Interpreter {
                 let string = arg.to_plain_string();
                 Ok(Value::Str(string))
             },
+            NativeFun::RoundNumber => {
+                fn get_integer_part(num: f64) -> i32 {
+                    let div = num.div_euclid(1.0);
+
+                    if num < 0.0 && num % 1.0 != 0.0 {
+                        // Add one to account for flooring behavior.
+                        div as i32 + 1
+                    } else {
+                        div as i32
+                    }
+                }
+
+                let mut args = args.into_iter();
+                let arg1 = args.next().unwrap();
+                let arg2 = args.next().unwrap();
+
+                if let (Value::Num(num), Value::Num(places)) = (arg1, arg2) {
+                    // The number of places cannot be negative or a decimal.
+                    if places < 0.0 || places % 1.0 != 0.0 {
+                        let err = RuntimeError::new(
+                            format!("invalid number of places to round"),
+                            ctx,
+                        );
+                        Err(RuntimeOutcome::Error(err))
+                    }
+                    // If the number of places is 0, then just return the 
+                    // integer part of the number.
+                    else if places == 0.0 {
+                        let integer_part = get_integer_part(num);
+                        Ok(Value::Str(integer_part.to_string()))
+                    }
+                    // Special-case floats that happen to be integers.
+                    // No need to check the fractional part, since there isn't one.
+                    else if num % 1.0 == 0.0 {
+                        let start = &*format!("{num}."); 
+                        
+                        let string: String = iter::once(start)
+                            .chain(iter::repeat("0").take(places as usize))
+                            .collect();
+
+                        Ok(Value::Str(string))
+                    }
+                    else {
+                        // Get the decimal part of the number, prefixed by "0."
+                        let fract_part = (num % 1.0).abs().to_string();
+                        
+                        // Subtract two to account for the "0." prefix.
+                        let current_dec_amt =  fract_part.len() - 2;
+
+                        let places = places as usize;
+
+                        // No need to add trailing zeroes.
+                        if places <= current_dec_amt {
+                            // Truncate the fractional part by the number of places.
+                            let new_fract_part = &fract_part[1..=places + 1];
+
+                            let integer_part = get_integer_part(num);
+                            Ok(Value::Str(format!("{integer_part}{new_fract_part}")))
+                        }
+                        // Trailing zeroes needed.
+                        else {
+                            let needed_trailing_zeroes = places - current_dec_amt;
+
+                            // Append the trailing zeroes to the current fractional part 
+                            // (without the leading "0").
+                            let new_fract_part: String = iter::once(fract_part.trim_start_matches("0"))
+                                .chain(
+                                    iter::repeat("0").take(needed_trailing_zeroes)
+                                )
+                                .collect();
+
+                            let integer_part = get_integer_part(num);
+                            Ok(Value::Str(format!("{integer_part}{new_fract_part}")))
+                        }
+                    }
+                }
+                else {
+                    let err = RuntimeError::new(
+                        format!("arguments must be numbers"),
+                        ctx,
+                    );
+                    Err(RuntimeOutcome::Error(err))
+                }
+            }
             NativeFun::Map => {
                 Ok(Value::Map(HashMap::new().to_rc_cell()))
             },
@@ -1603,6 +1688,10 @@ impl Interpreter {
         globals.define(
             "toString".to_owned(),
             Value::NativeFun(NativeFun::ToString),
+        );
+        globals.define(
+            "roundNumber".to_owned(),
+            Value::NativeFun(NativeFun::RoundNumber),
         );
         // Built-in type constructors.
         globals.define(

@@ -1,2 +1,2 @@
-H|1111|John Doe|2|600
-S|2222|Jane Doe|4|750
+H|1111|John Doe|2|600.00
+S|2222|Jane Doe|4|750.00
