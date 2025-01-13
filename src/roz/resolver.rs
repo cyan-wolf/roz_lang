@@ -119,6 +119,8 @@ impl Resolver {
                 self.declare(ident.clone());
                 self.define(ident);
 
+                let has_superclass = superclass.is_some();
+
                 if let Some(superclass) = superclass {
                     // Check that a class doesn't try to inherit from itself.
                     if name.extract_ident() == superclass.lvalue.extract_ident() {
@@ -130,6 +132,19 @@ impl Resolver {
                     }
 
                     self.resolve_var_access(superclass);
+                }
+
+                // Since the class has a superclass, we know that 
+                // an extra scope will be made in the interpreter 
+                // to store it.
+                if has_superclass {
+                    self.begin_scope();
+
+                    // Add 'super' to the newly created class scope.
+                    self.scopes
+                        .last_mut()
+                        .unwrap()
+                        .insert("super".to_owned(), true);
                 }
 
                 for method_decl in methods {
@@ -148,6 +163,11 @@ impl Resolver {
                     self.resolve_fun(method_decl, &ctx);
 
                     // End the additional scope that contains 'me'.
+                    self.end_scope();
+                }
+
+                // End the class' scope that contains "super".
+                if has_superclass {
                     self.end_scope();
                 }
             },
@@ -277,6 +297,10 @@ impl Resolver {
                 // Modify the AST to include the jump amount.
                 self.resolve_var_access(access);
             },
+            Expr::Super { access, property: _ } => {
+                // Modify the AST to include the jump amount.
+                self.resolve_var_access(access);
+            }
         }
     }
 

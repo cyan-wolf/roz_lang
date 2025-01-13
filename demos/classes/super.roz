@@ -1,0 +1,19 @@
+class A {
+    method() {
+        println("A's method");
+    }
+}
+
+class B < A {
+    method() {
+        println("B's method");
+    }
+
+    test() {
+        super.method(); // "A's method"
+    }
+}
+
+class C < B {}
+
+C().test();

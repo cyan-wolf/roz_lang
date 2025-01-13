@@ -454,26 +454,31 @@ impl Parser {
             TokenKind::Op(Op::StarEq),
             TokenKind::Op(Op::SlashEq),
         ]) {
-            let ctx_token = self.prev().clone();
-
             // Transform the in-place assignment operators into their 
             // simple forms, i.e. `+=` gets transformed into `+`.
             let op = {
-                let kind = match ctx_token.kind() {
+                let mut ctx_token = self.prev().clone();
+
+                *ctx_token.kind_mut() = match ctx_token.kind() {
                     TokenKind::Op(Op::PlusEq) => TokenKind::Op(Op::Plus),
                     TokenKind::Op(Op::MinusEq) => TokenKind::Op(Op::Minus),
                     TokenKind::Op(Op::StarEq) => TokenKind::Op(Op::Star),
                     TokenKind::Op(Op::SlashEq) => TokenKind::Op(Op::Slash),
                     _ => unreachable!(),
                 };
-                Token::new(kind, ctx_token.line())
+                ctx_token
             };
             // The right-hand-side (RHS) of the in-place operator.
             let rvalue = self.assignment()?.to_box();
-            // Build a new RHS.
-            let modified_rvalue = Expr::Binary { left: expr.clone().to_box(), op, right: rvalue };
 
-            self.finish_building_assignment(expr, modified_rvalue.to_box(), ctx_token)
+            // Build a new RHS.
+            let modified_rvalue = Expr::Binary { 
+                left: expr.clone().to_box(), 
+                op: op.clone(), 
+                right: rvalue, 
+            };
+
+            self.finish_building_assignment(expr, modified_rvalue.to_box(), op)
         }
         else {
             Ok(expr)
@@ -812,6 +817,33 @@ impl Parser {
                 self.advance();
                 // Jumps are set later in the resolver.
                 Expr::Me(VarAccess { lvalue: self.prev().clone(), jumps: None })
+            },
+            TokenKind::Keyword(Keyword::Super) => {
+                self.advance();
+
+                let keyword = self.prev().clone();
+
+                self.try_match(
+                    &TokenKind::Op(Op::Dot),
+                    |_| "expected '.' after 'super'".to_owned(),
+                )?;
+
+                let property = if let TokenKind::Literal(Literal::Ident(..)) = self.peek().kind() {
+                    self.advance();
+                    self.prev().clone()
+                } 
+                else {
+                    let token = self.peek();
+                    let err = SyntaxError::new(
+                        token.line(),
+                        "expected property name after '.'".to_owned(),
+                        Some(token.to_owned()),
+                    );
+                    return Err(err);
+                };
+
+                // Jumps are set later by the resolver.
+                Expr::Super { access: VarAccess { lvalue: keyword, jumps: None }, property }
             },
             TokenKind::Op(Op::LeftParen) => {
                 self.advance();

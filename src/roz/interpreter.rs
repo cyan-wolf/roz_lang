@@ -166,7 +166,12 @@ impl Interpreter {
                 return Err(RuntimeOutcome::Error(thrown_error));
             },
             Stmt::Fun(FunDecl {name, params, body}) => {
-                let fun = self.build_fun(Some(name.clone()), params, body);
+                let fun = self.build_fun(
+                    Some(name.clone()), 
+                    params, 
+                    body, 
+                    Rc::clone(&self.curr_env),
+                );
 
                 self.curr_env
                     .borrow_mut()
@@ -174,6 +179,22 @@ impl Interpreter {
             },
             Stmt::Class { name, methods, superclass } => {
                 let name = name.extract_ident();
+                let superclass = self.extract_superclass(superclass)?.map(Box::new);
+
+                // If there is a superclass, make an extra environment for the current class 
+                // that associates "super" with the superclass (at definition time).
+                let class_env = if superclass.is_some() {
+                    let env_with_super = self.new_env_with_enclosing();
+                    env_with_super
+                        .borrow_mut()
+                        .define("super".to_owned(), Value::Class(*superclass.clone().unwrap()));
+
+                    env_with_super
+                } else {
+                    // Otherwise, just use the current environment as there is no 
+                    // need to create a new one.
+                    Rc::clone(&self.curr_env)
+                };
 
                 // Convert the method declarations into function values.
                 // Collect them into a hash map that associates method names
@@ -185,13 +206,12 @@ impl Interpreter {
                             self.build_fun(
                                 Some(method.name), 
                                 method.params, 
-                                method.body
+                                method.body,
+                                Rc::clone(&class_env),
                             ),
                         )
                     })
                     .collect();
-
-                let superclass = self.extract_superclass(superclass)?.map(Box::new);
 
                 let class = Value::Class(Class { 
                     name: name.to_owned(), 
@@ -572,7 +592,12 @@ impl Interpreter {
                 Ok(Value::List(elems.to_rc_cell()))
             },
             Expr::Fun { params, body } => {
-                let fun = self.build_fun(None, params, body);
+                let fun = self.build_fun(
+                    None, 
+                    params, 
+                    body,
+                    Rc::clone(&self.curr_env),
+                );
                 Ok(Value::Fun(fun))
             },
             Expr::Var(access) => {
@@ -642,18 +667,54 @@ impl Interpreter {
             Expr::Me(access) => {
                 self.find_value_with_var_access(&access)
             },
+            Expr::Super { access, property } => {
+                // Find the previously stored superclass using "super".
+                let superclass = self.find_value_with_var_access(&access)?;
+                
+                // Transmute the "super" token into a "me" token.
+                let me_token = {
+                    let mut token = access.lvalue.clone();
+                    *token.kind_mut() = TokenKind::Keyword(Keyword::Me);
+                    token
+                };
+
+                // Find the current instance using the "me" token.
+                let instance = self
+                    .find_actual_env(
+                        access.jumps.map(|j| j - 1)
+                    )
+                    .borrow()
+                    .retrieve(&me_token)?;
+                
+                if let Value::Class(superclass) = superclass {
+                    // Find the method on the superclass and bind the 
+                    // current instance.
+                    let mut method = superclass.find_method(&property)?;
+                    method.bind(instance);
+                    Ok(Value::Fun(method))
+                }
+                else {
+                    unreachable!()
+                }
+            },
         }
     }
 
-    /// Build a runtime function. Stores a reference to the 
+    /// Build a runtime function. Typically stores a reference to the 
     /// current environment (at definition time), which allows 
     /// the implementation of closures.
-    fn build_fun(&mut self, name: Option<String>, params: Vec<Token>, body: Vec<Stmt>) -> Fun {
+    fn build_fun(
+        &mut self, 
+        name: Option<String>, 
+        params: Vec<Token>, 
+        body: Vec<Stmt>,
+        env: RcCell<Environment>,
+    ) -> Fun {
         Fun {
             name, 
             params, 
             body, 
-            env: Rc::clone(&self.curr_env),
+            env,
         }
     }
 
@@ -747,8 +808,7 @@ impl Interpreter {
                 Environment::ancestor(curr_env, jumps)
                     .expect("unexpected error: outer scope was None")
             },
-            // There are no jumps, so the variable is in the global scope.
-            None => curr_env
+            None => curr_env,
         }
     }
 

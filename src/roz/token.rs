@@ -20,12 +20,17 @@ impl Token {
         &self.kind
     }
 
+    pub fn kind_mut(&mut self) -> &mut TokenKind {
+        &mut self.kind
+    }
+
     /// Returns the string identifier of this token. 
-    /// Note: panics if this token is not an identifier or a `me` token.
+    /// Note: panics if this token is not an identifier or a `me`/`super` token.
     pub fn extract_ident(&self) -> &str {
         match self.kind {
             TokenKind::Literal(Literal::Ident(ref ident)) => ident,
             TokenKind::Keyword(Keyword::Me) => "me",
+            TokenKind::Keyword(Keyword::Super) => "super",
             _ => panic!("unexpected error: token '{self}' was not an identifier"),
         }
     }

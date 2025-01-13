@@ -26,6 +26,7 @@ pub enum Expr {
     Assign { access: VarAccess, rvalue: Box<Expr> },
     Call { callee: Box<Expr>, args: Vec<Expr>, ctx: Token },
     Me(VarAccess),
+    Super { access: VarAccess, property: Token },
     Get { source: Box<Expr>, property: Token },
     Set { source: Box<Expr>, property: Token, rvalue: Box<Expr> },
 }
@@ -50,6 +51,8 @@ impl Display for Expr {
             },
             Expr::Fun { .. } =>  write!(f, "(fun(..) {{..}})"),
             Expr::Var(VarAccess { lvalue, .. }) => write!(f, "var({lvalue})"),
+            Expr::Me { .. } => write!(f, "var(me)"),
+            Expr::Super { access: _, property } => write!(f, "super.{property}"),
             Expr::Assign { access: VarAccess { lvalue, .. }, rvalue, .. } => {
                 write!(f, "({lvalue} = {rvalue})")
             },
@@ -58,7 +61,6 @@ impl Display for Expr {
             Expr::Set { source, property, rvalue } => {
                 write!(f, "(set {source}.{property} = {rvalue})")
             },
-            Expr::Me { .. } => write!(f, "var(me)"),
         }
     }
 }
