@@ -5,7 +5,7 @@
 the [Lox](https://craftinginterpreters.com/the-lox-language.html) language. 
 
 ## What is Lox?
-Lox is a dyanically-typed interpreted programming language implemented in the [Crafting Interpreters](https://craftinginterpreters.com/) book by Robert Nystrom. 
+Lox is a dynamically-typed interpreted programming language implemented in the [Crafting Interpreters](https://craftinginterpreters.com/) book by Robert Nystrom. 
 In the book, the author discusses two implementations of Lox: one in Java called **jlox** and another one in C called **clox**. 
 * In the **jlox** version, scripts are executed by parsing using a 
 recursive descent parser and then by traversing the generated abstract syntax tree (AST).
